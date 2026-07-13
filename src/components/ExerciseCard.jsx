@@ -3,21 +3,34 @@ import { Repeat, ExternalLink } from 'lucide-react'
 import InfoTooltip from './InfoTooltip'
 import { RPE_EXPLAINER } from '../data/program'
 
-export default function ExerciseCard({ exercise, prescribedSets, lastLoggedText, sets, onSetChange }) {
+// activeAlt: null when the base exercise is active, otherwise the selected
+// alternative object ({ name, demoUrl }). Controlled by the parent
+// (WorkoutSession) so the swap choice persists to storage like everything
+// else in the session — a local useState here would reset on remount.
+export default function ExerciseCard({ exercise, prescribedSets, lastLoggedText, sets, onSetChange, activeAlt, onSwap }) {
   const [showAlternatives, setShowAlternatives] = useState(false)
-  const [activeName, setActiveName] = useState(exercise.name)
 
   const isCardio = !!exercise.isCardio
+  const activeName = activeAlt?.name ?? exercise.name
+  const activeDemoUrl = activeAlt?.demoUrl ?? exercise.demoUrl
+  const demoHref =
+    activeDemoUrl ||
+    `https://www.youtube.com/results?search_query=${encodeURIComponent(activeName + ' proper form')}`
 
   return (
     <div className="glass rounded-2xl p-4">
       <div className="flex items-start justify-between gap-2">
         <div>
           <h4 className="font-display text-base text-base-100">{activeName}</h4>
-          <p className="text-xs text-base-400 mt-0.5">
-            {isCardio
-              ? `${exercise.duration} · ${exercise.cardioType.replace('-', ' ')}`
-              : `${prescribedSets} sets x ${exercise.repRange} · RPE ${exercise.rpe}`}
+          <p className="text-xs text-base-400 mt-0.5 flex items-center gap-1">
+            {isCardio ? (
+              `${exercise.duration} · ${exercise.cardioType.replace('-', ' ')}`
+            ) : (
+              <>
+                {prescribedSets} sets x {exercise.repRange} · RPE {exercise.rpe}
+                <InfoTooltip title={RPE_EXPLAINER.title} body={RPE_EXPLAINER.body} />
+              </>
+            )}
           </p>
           {lastLoggedText && (
             <p className="text-xs text-accent-start mt-1">Last time: {lastLoggedText}</p>
@@ -34,17 +47,31 @@ export default function ExerciseCard({ exercise, prescribedSets, lastLoggedText,
 
       {showAlternatives && (
         <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              onSwap(null)
+              setShowAlternatives(false)
+            }}
+            className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
+              !activeAlt ? 'bg-accent-start text-base-950' : 'bg-base-800 text-base-200 hover:bg-base-700'
+            }`}
+          >
+            {exercise.name} (default)
+          </button>
           {exercise.alternatives?.map((alt) => (
             <button
-              key={alt}
+              key={alt.name}
               type="button"
               onClick={() => {
-                setActiveName(alt)
+                onSwap(alt)
                 setShowAlternatives(false)
               }}
-              className="text-xs px-3 py-1.5 rounded-full bg-base-800 text-base-200 hover:bg-base-700 transition-colors"
+              className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
+                activeAlt?.name === alt.name ? 'bg-accent-start text-base-950' : 'bg-base-800 text-base-200 hover:bg-base-700'
+              }`}
             >
-              {alt}
+              {alt.name}
             </button>
           ))}
         </div>
@@ -52,16 +79,13 @@ export default function ExerciseCard({ exercise, prescribedSets, lastLoggedText,
 
       {!isCardio && (
         <div className="mt-4 space-y-2">
-          <div className="grid grid-cols-[2rem_1fr_1fr_1fr] gap-2 text-xs text-base-400 px-1">
+          <div className="grid grid-cols-[2rem_1fr_1fr] gap-2 text-xs text-base-400 px-1">
             <span>Set</span>
             <span>Weight</span>
             <span>Reps</span>
-            <span className="flex items-center gap-1">
-              RPE <InfoTooltip title={RPE_EXPLAINER.title} body={RPE_EXPLAINER.body} />
-            </span>
           </div>
           {Array.from({ length: prescribedSets }).map((_, i) => (
-            <div key={i} className="grid grid-cols-[2rem_1fr_1fr_1fr] gap-2 items-center">
+            <div key={i} className="grid grid-cols-[2rem_1fr_1fr] gap-2 items-center">
               <span className="text-sm text-base-400">{i + 1}</span>
               <input
                 type="number"
@@ -79,23 +103,13 @@ export default function ExerciseCard({ exercise, prescribedSets, lastLoggedText,
                 onChange={(e) => onSetChange(i, 'reps', e.target.value)}
                 className="bg-base-800 rounded-lg px-2 py-1.5 text-sm text-base-100 outline-none focus:ring-1 focus:ring-accent-start"
               />
-              <input
-                type="number"
-                inputMode="decimal"
-                placeholder="RPE"
-                min="1"
-                max="10"
-                value={sets[i]?.rpe ?? ''}
-                onChange={(e) => onSetChange(i, 'rpe', e.target.value)}
-                className="bg-base-800 rounded-lg px-2 py-1.5 text-sm text-base-100 outline-none focus:ring-1 focus:ring-accent-start"
-              />
             </div>
           ))}
         </div>
       )}
 
       <a
-        href={`https://www.youtube.com/results?search_query=${encodeURIComponent(activeName + ' proper form')}`}
+        href={demoHref}
         target="_blank"
         rel="noreferrer"
         className="mt-3 inline-flex items-center gap-1 text-xs text-base-400 hover:text-accent-start transition-colors"

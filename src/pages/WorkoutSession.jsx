@@ -11,6 +11,26 @@ function storageKey(dayId) {
   return `session-in-progress-${dayId}`
 }
 
+// Persisted to localStorage rather than sessionStorage: sessionStorage is
+// tied to the browsing session and mobile browsers (iOS Safari in
+// particular) will readily discard it when the app is backgrounded and the
+// OS reclaims memory — exactly the "switch tabs, lose my sets" scenario.
+// localStorage survives that.
+function loadStoredSession(dayId) {
+  try {
+    const raw = localStorage.getItem(storageKey(dayId))
+    if (!raw) return { setsByExercise: {}, effort: null, swaps: {} }
+    const parsed = JSON.parse(raw)
+    return {
+      setsByExercise: parsed.setsByExercise || {},
+      effort: parsed.effort ?? null,
+      swaps: parsed.swaps || {},
+    }
+  } catch {
+    return { setsByExercise: {}, effort: null, swaps: {} }
+  }
+}
+
 export default function WorkoutSession() {
   const { dayId } = useParams()
   const navigate = useNavigate()
@@ -30,26 +50,24 @@ export default function WorkoutSession() {
     return () => { cancelled = true }
   }, [])
 
-  const [setsByExercise, setSetsByExercise] = useState({})
-  const [effort, setEffort] = useState(null)
+  // Lazy initializers read straight from storage on mount. This component
+  // is remounted (via the `key={dayId}` wrapper in App.jsx) any time the
+  // session day changes, so this is always correct — no separate restore
+  // effect needed, which avoids a real race where a same-tick persist
+  // effect would overwrite the just-loaded data with empty defaults before
+  // React re-rendered with it.
+  const initial = useMemo(() => loadStoredSession(dayId), [dayId])
+  const [setsByExercise, setSetsByExercise] = useState(initial.setsByExercise)
+  const [effort, setEffort] = useState(initial.effort)
+  const [swaps, setSwaps] = useState(initial.swaps)
   const [pastLogs, setPastLogs] = useState([])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  // Restore in-progress state from sessionStorage (survives tab switches).
+  // Persist on every change.
   useEffect(() => {
-    const raw = sessionStorage.getItem(storageKey(dayId))
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      setSetsByExercise(parsed.setsByExercise || {})
-      setEffort(parsed.effort || null)
-    }
-  }, [dayId])
-
-  // Persist to sessionStorage on every change.
-  useEffect(() => {
-    sessionStorage.setItem(storageKey(dayId), JSON.stringify({ setsByExercise, effort }))
-  }, [dayId, setsByExercise, effort])
+    localStorage.setItem(storageKey(dayId), JSON.stringify({ setsByExercise, effort, swaps }))
+  }, [dayId, setsByExercise, effort, swaps])
 
   // Pull past logs for "last time you lifted X" reminders.
   useEffect(() => {
@@ -87,10 +105,22 @@ export default function WorkoutSession() {
     })
   }
 
+  // alt is either an alternative { name, demoUrl } object or null (swap back
+  // to the default exercise). Stored per exerciseId so it survives
+  // navigation away and back, same as logged sets.
+  function handleSwap(exerciseId, alt) {
+    setSwaps((prev) => {
+      const next = { ...prev }
+      if (alt) next[exerciseId] = alt
+      else delete next[exerciseId]
+      return next
+    })
+  }
+
   function lastLoggedTextFor(exerciseId) {
     const last = getLastLoggedSet(pastLogs, exerciseId)
     if (!last) return null
-    return `${last.weight ?? '—'}${last.weight_unit || 'lb'} x ${last.reps ?? '—'} @ RPE ${last.rpe ?? '—'}`
+    return `${last.weight ?? '—'}${last.weight_unit || 'lb'} x ${last.reps ?? '—'}`
   }
 
   async function handleComplete() {
@@ -113,11 +143,13 @@ export default function WorkoutSession() {
       const rows = []
       for (const ex of day.exercises) {
         const sets = setsByExercise[ex.id] || []
+        const swappedTo = swaps[ex.id]?.name || null
         sets.forEach((set, i) => {
           if (!set) return
           rows.push({
             session_id: session.id,
             exercise_id: ex.id,
+            exercise_name: swappedTo,
             set_number: i + 1,
             weight: set.weight ? Number(set.weight) : null,
             reps: set.reps ? Number(set.reps) : null,
@@ -131,7 +163,7 @@ export default function WorkoutSession() {
         if (logsError) throw logsError
       }
 
-      sessionStorage.removeItem(storageKey(dayId))
+      localStorage.removeItem(storageKey(dayId))
       setSaved(true)
       setTimeout(() => navigate('/'), 1200)
     } catch (err) {
@@ -167,6 +199,8 @@ export default function WorkoutSession() {
               lastLoggedText={ex.isCardio ? null : lastLoggedTextFor(ex.id)}
               sets={setsByExercise[ex.id] || []}
               onSetChange={(setIndex, field, value) => handleSetChange(ex.id, setIndex, field, value)}
+              activeAlt={swaps[ex.id] || null}
+              onSwap={(alt) => handleSwap(ex.id, alt)}
             />
           )
         })}

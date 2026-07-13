@@ -21,6 +21,7 @@ create table if not exists exercise_logs (
   id uuid primary key default gen_random_uuid(),
   session_id uuid not null references workout_sessions(id) on delete cascade,
   exercise_id text not null,         -- matches id in src/data/program.js
+  exercise_name text,                -- set only when a swap/alternative was used in place of the default exercise; null otherwise
   set_number int not null,
   weight numeric,                    -- null for cardio / bodyweight
   weight_unit text default 'lb',

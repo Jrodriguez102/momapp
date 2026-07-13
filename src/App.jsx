@@ -1,8 +1,16 @@
-import { HashRouter, Routes, Route, NavLink } from 'react-router-dom'
+import { HashRouter, Routes, Route, NavLink, useParams } from 'react-router-dom'
 import { LayoutDashboard, LineChart } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import WorkoutSession from './pages/WorkoutSession'
 import Progress from './pages/Progress'
+
+// Keying on dayId guarantees a clean remount whenever the session day
+// changes, so WorkoutSession can safely read its initial state straight
+// from storage (no restore-then-overwrite race between effects).
+function WorkoutSessionRoute() {
+  const { dayId } = useParams()
+  return <WorkoutSession key={dayId} />
+}
 
 function NavBar() {
   const linkClass = ({ isActive }) =>
@@ -31,7 +39,7 @@ export default function App() {
         <NavBar />
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/session/:dayId" element={<WorkoutSession />} />
+          <Route path="/session/:dayId" element={<WorkoutSessionRoute />} />
           <Route path="/progress" element={<Progress />} />
         </Routes>
       </div>

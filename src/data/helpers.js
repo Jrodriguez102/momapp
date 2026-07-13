@@ -1,6 +1,14 @@
 import { MUSCLE_GROUPS, VOLUME_THRESHOLDS, getWeekMeta, applyDeloadToSets, PROGRAM_DAYS } from './program'
 import { supabase } from '../lib/supabase'
 
+// ---- Personalization --------------------------------------------------------
+export function getGreeting(date = new Date()) {
+  const hour = date.getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
+}
+
 // ---- Block / week math ------------------------------------------------------
 // Session-count-based (not calendar-based): every 5 completed sessions is
 // one training week (5-day split), 4 training weeks is one block, and week 4

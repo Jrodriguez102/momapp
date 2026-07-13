@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Flame } from 'lucide-react'
-import { PROGRAM_DAYS } from '../data/program'
-import { getCurrentBlockAndWeek, getCompletedSessionCount, getPlannedWeeklyVolume } from '../data/helpers'
+import { PROGRAM_DAYS, USER_NAME } from '../data/program'
+import { getCurrentBlockAndWeek, getCompletedSessionCount, getPlannedWeeklyVolume, getGreeting } from '../data/helpers'
+import { getDailyQuote } from '../data/quotes'
 import BodyDiagram from '../components/BodyDiagram'
 
 export default function Dashboard() {
@@ -25,6 +26,11 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 pt-8 space-y-6">
+      <div>
+        <p className="text-base-100 text-lg font-display">{getGreeting()}, {USER_NAME}</p>
+        <p className="text-xs text-base-400 italic mt-0.5">{getDailyQuote()}</p>
+      </div>
+
       <div>
         <p className="text-base-400 text-sm">Block {weekMeta.block}</p>
         <h1 className="font-display text-3xl text-base-100">{weekMeta.label}</h1>
