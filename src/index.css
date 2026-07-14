@@ -1,22 +1,27 @@
 @import "tailwindcss";
 
 @theme {
-  --color-base-950: #0f0c0a;
-  --color-base-900: #17130f;
-  --color-base-800: #221c17;
-  --color-base-700: #2f2721;
-  --color-base-600: #46392f;
-  --color-base-400: #8a7a6c;
-  --color-base-200: #e8ddd0;
-  --color-base-100: #f5efe6;
+  /* Reversed scale vs. the old dark theme: base-950 is now the lightest
+     (page background), base-100 the darkest (primary text). Keeping the
+     950->100 naming direction as-is (rather than flipping it) means every
+     existing text-base-100 / bg-base-950 class in components still means
+     "primary text" / "page background" without a find-and-replace pass. */
+  --color-base-950: #fdfaf9;
+  --color-base-900: #f7f0ee;
+  --color-base-800: #ffffff;
+  --color-base-700: #f2e2df;
+  --color-base-600: #ecdcd9;
+  --color-base-400: #8a7570;
+  --color-base-200: #5a3f39;
+  --color-base-100: #2b1f1c;
 
-  --color-accent-start: #e0864f;
-  --color-accent-end: #c65d3b;
+  --color-accent-start: #e2685c;
+  --color-accent-end: #c2453a;
 
-  --color-glute: #c65d3b;
-  --color-back: #7a8f6e;
-  --color-quad: #d9a441;
-  --color-shoulder: #b0793f;
+  --color-glute: #e24b4a;
+  --color-back: #639922;
+  --color-quad: #EF9F27;
+  --color-shoulder: #c2453a;
 
   --font-display: "Fraunces", serif;
   --font-body: "Inter", sans-serif;
@@ -29,10 +34,11 @@ body {
 }
 
 .glass {
-  background: rgba(34, 28, 23, 0.55);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(232, 221, 208, 0.08);
+  border: 1px solid rgba(43, 31, 28, 0.06);
+  box-shadow: 0 1px 3px rgba(43, 31, 28, 0.05);
 }
 
 .accent-gradient {

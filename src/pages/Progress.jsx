@@ -43,7 +43,6 @@ export default function Progress() {
         date: new Date(l.logged_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
         weight: l.weight,
         reps: l.reps,
-        rpe: l.rpe,
       }))
   }, [logs, selectedExerciseId])
 
@@ -87,21 +86,6 @@ export default function Progress() {
                   contentStyle={{ background: 'var(--color-base-800)', border: 'none', borderRadius: 8 }}
                 />
                 <Line type="monotone" dataKey="weight" stroke="var(--color-accent-start)" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="glass rounded-2xl p-4">
-            <h3 className="font-display text-base text-base-100 mb-3">RPE over time</h3>
-            <ResponsiveContainer width="100%" height={180}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-base-700)" />
-                <XAxis dataKey="date" stroke="var(--color-base-400)" fontSize={11} />
-                <YAxis domain={[0, 10]} stroke="var(--color-base-400)" fontSize={11} />
-                <Tooltip
-                  contentStyle={{ background: 'var(--color-base-800)', border: 'none', borderRadius: 8 }}
-                />
-                <Line type="monotone" dataKey="rpe" stroke="var(--color-back)" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>

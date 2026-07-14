@@ -1,7 +1,9 @@
 import { HashRouter, Routes, Route, NavLink, useParams } from 'react-router-dom'
-import { LayoutDashboard, LineChart } from 'lucide-react'
+import { LayoutDashboard, PersonStanding, History as HistoryIcon, LineChart } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import WorkoutSession from './pages/WorkoutSession'
+import VolumeTracker from './pages/VolumeTracker'
+import History from './pages/History'
 import Progress from './pages/Progress'
 
 // Keying on dayId guarantees a clean remount whenever the session day
@@ -24,6 +26,14 @@ function NavBar() {
         <LayoutDashboard size={20} />
         <span className="text-xs">Home</span>
       </NavLink>
+      <NavLink to="/volume" className={linkClass}>
+        <PersonStanding size={20} />
+        <span className="text-xs">Volume</span>
+      </NavLink>
+      <NavLink to="/history" className={linkClass}>
+        <HistoryIcon size={20} />
+        <span className="text-xs">History</span>
+      </NavLink>
       <NavLink to="/progress" className={linkClass}>
         <LineChart size={20} />
         <span className="text-xs">Progress</span>
@@ -40,6 +50,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/session/:dayId" element={<WorkoutSessionRoute />} />
+          <Route path="/volume" element={<VolumeTracker />} />
+          <Route path="/history" element={<History />} />
           <Route path="/progress" element={<Progress />} />
         </Routes>
       </div>

@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Flame } from 'lucide-react'
 import { PROGRAM_DAYS, USER_NAME } from '../data/program'
-import { getCurrentBlockAndWeek, getCompletedSessionCount, getPlannedWeeklyVolume, getGreeting } from '../data/helpers'
+import { getCurrentBlockAndWeek, getCompletedSessionCount, getGreeting } from '../data/helpers'
 import { getDailyQuote } from '../data/quotes'
-import BodyDiagram from '../components/BodyDiagram'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -21,8 +20,6 @@ export default function Dashboard() {
   }, [])
 
   if (!weekMeta) return null
-
-  const volumeByGroup = getPlannedWeeklyVolume(weekMeta.weekInBlock)
 
   return (
     <div className="max-w-2xl mx-auto px-4 pt-8 space-y-6">
@@ -61,8 +58,6 @@ export default function Dashboard() {
           </button>
         ))}
       </div>
-
-      <BodyDiagram volumeByGroup={volumeByGroup} />
     </div>
   )
 }
