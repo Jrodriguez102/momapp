@@ -1,8 +1,7 @@
 import { HashRouter, Routes, Route, NavLink, useParams } from 'react-router-dom'
-import { LayoutDashboard, PersonStanding, History as HistoryIcon, LineChart } from 'lucide-react'
+import { LayoutDashboard, History as HistoryIcon, LineChart } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import WorkoutSession from './pages/WorkoutSession'
-import VolumeTracker from './pages/VolumeTracker'
 import History from './pages/History'
 import Progress from './pages/Progress'
 
@@ -14,30 +13,36 @@ function WorkoutSessionRoute() {
   return <WorkoutSession key={dayId} />
 }
 
-function NavBar() {
-  const linkClass = ({ isActive }) =>
-    `flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-colors ${
-      isActive ? 'accent-text-gradient' : 'text-base-400'
-    }`
+const NAV_ITEMS = [
+  { to: '/', end: true, icon: LayoutDashboard, label: 'Home' },
+  { to: '/history', icon: HistoryIcon, label: 'History' },
+  { to: '/progress', icon: LineChart, label: 'Progress' },
+]
 
+function NavBar() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 glass flex justify-around py-2 z-50 md:top-0 md:bottom-auto md:justify-start md:gap-4 md:px-8">
-      <NavLink to="/" end className={linkClass}>
-        <LayoutDashboard size={20} />
-        <span className="text-xs">Home</span>
-      </NavLink>
-      <NavLink to="/volume" className={linkClass}>
-        <PersonStanding size={20} />
-        <span className="text-xs">Volume</span>
-      </NavLink>
-      <NavLink to="/history" className={linkClass}>
-        <HistoryIcon size={20} />
-        <span className="text-xs">History</span>
-      </NavLink>
-      <NavLink to="/progress" className={linkClass}>
-        <LineChart size={20} />
-        <span className="text-xs">Progress</span>
-      </NavLink>
+    <nav className="fixed bottom-4 left-4 right-4 z-50 md:top-4 md:bottom-auto md:left-1/2 md:right-auto md:-translate-x-1/2">
+      <div className="mx-auto flex max-w-sm items-center justify-around gap-1 rounded-full bg-base-100 p-1.5 shadow-lg md:max-w-none md:justify-center md:gap-2 md:px-2">
+        {NAV_ITEMS.map(({ to, end, icon: Icon, label }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            className={({ isActive }) =>
+              `flex items-center gap-1.5 rounded-full px-3.5 py-2.5 transition-all ${
+                isActive ? 'bg-base-800' : 'text-base-900/50 hover:text-base-900/80'
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <Icon size={18} className={isActive ? 'text-accent-start' : ''} />
+                {isActive && <span className="text-xs font-semibold text-base-100 whitespace-nowrap">{label}</span>}
+              </>
+            )}
+          </NavLink>
+        ))}
+      </div>
     </nav>
   )
 }
@@ -45,12 +50,11 @@ function NavBar() {
 export default function App() {
   return (
     <HashRouter>
-      <div className="min-h-screen pb-20 md:pb-0 md:pt-20">
+      <div className="min-h-screen pb-24 md:pb-0 md:pt-24">
         <NavBar />
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/session/:dayId" element={<WorkoutSessionRoute />} />
-          <Route path="/volume" element={<VolumeTracker />} />
           <Route path="/history" element={<History />} />
           <Route path="/progress" element={<Progress />} />
         </Routes>

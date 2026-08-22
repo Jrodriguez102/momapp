@@ -16,7 +16,7 @@ export default function InfoTooltip({ title, body }) {
         <Info size={14} />
       </button>
       {open && (
-        <div className="absolute left-1/2 -translate-x-1/2 top-6 z-50 w-64 glass rounded-xl p-3 text-xs text-base-200 shadow-lg">
+        <div className="absolute left-1/2 -translate-x-1/2 top-6 z-50 w-64 card rounded-xl p-3 text-xs text-base-200">
           <p className="font-semibold text-base-100 mb-1">{title}</p>
           <p>{body}</p>
         </div>

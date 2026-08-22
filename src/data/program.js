@@ -95,6 +95,17 @@ export const RPE_EXPLAINER = {
     "feel different depending on sleep, stress, or recovery.",
 }
 
+// ---- Weekly schedule ---------------------------------------------------------
+// Fixed weekday assignment: Day 1-5 always fall on Mon-Fri, in program order.
+// Weekdays use JS Date.getDay() convention (Sun=0...Sat=6). Weekends have no
+// entry here and are treated as rest days everywhere this is consumed.
+export const SCHEDULE_WEEKDAYS = [1, 2, 3, 4, 5] // Mon, Tue, Wed, Thu, Fri
+
+export function getProgramDayForWeekday(weekday) {
+  const index = SCHEDULE_WEEKDAYS.indexOf(weekday)
+  return index === -1 ? null : PROGRAM_DAYS[index]
+}
+
 // ---- The program ------------------------------------------------------------
 // Each exercise: id, name, sets, repRange, rpe, muscleGroups[], alternatives[],
 // isCardio, supersetGroup (optional, pairs exercises done back-to-back).
@@ -102,6 +113,7 @@ export const PROGRAM_DAYS = [
   {
     id: 'day-1',
     name: 'Upper (Push Emphasis)',
+    shortLabel: 'Push',
     hasCardio: true,
     exercises: [
       {
@@ -193,6 +205,7 @@ export const PROGRAM_DAYS = [
   {
     id: 'day-2',
     name: 'Lower (Glute / Hamstring Emphasis)',
+    shortLabel: 'Lower',
     hasCardio: false,
     exercises: [
       {
@@ -315,6 +328,7 @@ export const PROGRAM_DAYS = [
   {
     id: 'day-3',
     name: 'Upper (Pull Emphasis)',
+    shortLabel: 'Pull',
     hasCardio: true,
     exercises: [
       {
@@ -406,6 +420,7 @@ export const PROGRAM_DAYS = [
   {
     id: 'day-4',
     name: 'Lower (Quad / Glute Emphasis)',
+    shortLabel: 'Lower',
     hasCardio: false,
     exercises: [
       {
@@ -484,6 +499,7 @@ export const PROGRAM_DAYS = [
   {
     id: 'day-5',
     name: 'Full Body (Glutes + Arms)',
+    shortLabel: 'Full',
     hasCardio: true,
     cardioOptional: true,
     exercises: [

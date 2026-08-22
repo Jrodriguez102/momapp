@@ -23,7 +23,7 @@
   --color-quad: #EF9F27;
   --color-shoulder: #c2453a;
 
-  --font-display: "Fraunces", serif;
+  --font-display: "Nunito", sans-serif;
   --font-body: "Inter", sans-serif;
 }
 
@@ -39,6 +39,13 @@ body {
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(43, 31, 28, 0.06);
   box-shadow: 0 1px 3px rgba(43, 31, 28, 0.05);
+}
+
+/* Flat, opaque card — no blur/border, just a soft shadow lifting it off the
+   page background. Replacing .glass tab-by-tab as each gets its design pass. */
+.card {
+  background: var(--color-base-800);
+  box-shadow: 0 2px 16px rgba(43, 31, 28, 0.06);
 }
 
 .accent-gradient {
