@@ -107,10 +107,22 @@ text"/"page background" without a rename pass. Display font is Nunito (bold
 rounded sans, `font-display`); body/UI text is Inter (`font-body`). Cards use the
 flat `.card` class (opaque `base-800` surface + soft shadow, no blur/border) —
 this replaced the original `.glass` treatment tab-by-tab as each got its design
-pass; `.glass` still exists and is still used by not-yet-redesigned areas
-(`WorkoutSession.jsx`, `ExerciseCard.jsx`, `EffortTap.jsx`), so don't remove it
-while any consumer remains. Nav is a floating dark pill (`App.jsx`) with the
+pass; all tabs are now on `.card`. `.glass` still exists and is still used by
+`EffortTap.jsx` only, left untouched per explicit instruction — don't remove it
+while that consumer remains. Nav is a floating dark pill (`App.jsx`) with the
 active tab rendered as a white sub-pill.
+
+**History tab:** a flat chronological list of completed sessions (most recent
+first, no block/week grouping — that context already lives on the Home tab),
+with an All / This Week / This Month filter. `getCompletedSessions()` fetches
+the sessions and `getExerciseLogsForSessions()` bulk-fetches every logged set
+across all of them in one query (not per-row), so each row's summary — minutes,
+set count, total volume via `getSetsVolume()` — is available up front rather
+than lazily. Tapping a row expands it in place to the full workout:
+`groupSessionLogsByExercise()` groups sets per exercise and flags a swapped-in
+alternative via its `originalName` field (set whenever a logged
+`exercise_name` differs from the prescribed exercise), plus the session's
+duration/volume/effort response.
 
 ## Before deploying
 
