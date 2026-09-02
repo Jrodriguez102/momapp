@@ -117,7 +117,7 @@ export default function ExerciseCard({ exercise, prescribedSets, lastLoggedText,
                   placeholder="lb"
                   value={set?.weight ?? ''}
                   onChange={(e) => onSetChange(i, 'weight', e.target.value)}
-                  className="bg-base-900 rounded-xl px-2 py-1.5 text-sm text-base-100 outline-none focus:ring-1 focus:ring-accent-start"
+                  className="w-full min-w-0 bg-base-900 rounded-xl px-2 py-1.5 text-sm text-base-100 outline-none focus:ring-1 focus:ring-accent-start"
                 />
                 <input
                   type="number"
@@ -125,7 +125,7 @@ export default function ExerciseCard({ exercise, prescribedSets, lastLoggedText,
                   placeholder="reps"
                   value={set?.reps ?? ''}
                   onChange={(e) => onSetChange(i, 'reps', e.target.value)}
-                  className="bg-base-900 rounded-xl px-2 py-1.5 text-sm text-base-100 outline-none focus:ring-1 focus:ring-accent-start"
+                  className="w-full min-w-0 bg-base-900 rounded-xl px-2 py-1.5 text-sm text-base-100 outline-none focus:ring-1 focus:ring-accent-start"
                 />
                 <button
                   type="button"
@@ -142,14 +142,16 @@ export default function ExerciseCard({ exercise, prescribedSets, lastLoggedText,
         </div>
       )}
 
-      <a
-        href={demoHref}
-        target="_blank"
-        rel="noreferrer"
-        className="mt-3 inline-flex items-center gap-1 text-xs text-base-400 hover:text-accent-start transition-colors"
-      >
-        <ExternalLink size={12} /> Watch demo
-      </a>
+      {!isCardio && (
+        <a
+          href={demoHref}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 inline-flex items-center gap-1 text-xs text-base-400 hover:text-accent-start transition-colors"
+        >
+          <ExternalLink size={12} /> Watch demo
+        </a>
+      )}
     </div>
   )
 }

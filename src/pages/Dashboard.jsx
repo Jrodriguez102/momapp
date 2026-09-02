@@ -51,8 +51,10 @@ export default function Dashboard() {
   const today = new Date()
   const todayEntry = schedule.find((entry) => entry.date.toDateString() === today.toDateString())
   const nextEntry = getNextScheduledDay(schedule, today)
-  const scheduledCount = schedule.filter((entry) => entry.programDay).length
-  const completedThisWeek = schedule.filter((entry) => entry.status === 'completed').length
+  // Excludes the optional day (Saturday active recovery) — it's a bonus,
+  // not part of the required training week, so this stat stays "X/5".
+  const scheduledCount = schedule.filter((entry) => entry.programDay && !entry.programDay.optional).length
+  const completedThisWeek = schedule.filter((entry) => entry.status === 'completed' && !entry.programDay?.optional).length
 
   return (
     <div className="max-w-2xl mx-auto px-4 pt-8 pb-4 space-y-5">

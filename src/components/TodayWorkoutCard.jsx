@@ -76,7 +76,7 @@ export default function TodayWorkoutCard({ todayEntry, nextEntry, inProgressSess
     )
   }
 
-  const { exerciseCount, muscles, hasCardio } = getDaySummary(todayEntry.programDay)
+  const { exerciseCount, muscles, hasCardio, cardioDuration } = getDaySummary(todayEntry.programDay)
 
   return (
     <div className="accent-gradient rounded-[28px] p-5 relative overflow-hidden shadow-[0_10px_28px_rgba(194,69,58,0.28)]">
@@ -90,7 +90,9 @@ export default function TodayWorkoutCard({ todayEntry, nextEntry, inProgressSess
       <p className="relative text-xs text-white/70 mt-3">Today's workout</p>
       <h2 className="relative font-display font-extrabold text-2xl text-white mt-0.5">{todayEntry.programDay.name}</h2>
       <p className="relative text-xs text-white/80 mt-1.5">
-        {exerciseCount} exercises{hasCardio ? ' + cardio' : ''} · {muscles.map(capitalize).join(', ')}
+        {exerciseCount > 0
+          ? `${exerciseCount} exercises${hasCardio ? ' + cardio' : ''} · ${muscles.map(capitalize).join(', ')}`
+          : `Cardio${cardioDuration ? ` · ${cardioDuration}` : ''}`}
       </p>
       <button
         type="button"

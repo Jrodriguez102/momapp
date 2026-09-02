@@ -1,0 +1,18 @@
+{
+  "name": "Strength & Tone",
+  "short_name": "Strength & Tone",
+  "description": "Arlene's workout program tracker",
+  "start_url": "/momapp/",
+  "scope": "/momapp/",
+  "display": "standalone",
+  "background_color": "#fdfaf9",
+  "theme_color": "#e2685c",
+  "icons": [
+    {
+      "src": "/momapp/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

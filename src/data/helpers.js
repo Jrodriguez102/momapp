@@ -26,15 +26,23 @@ export function getCurrentBlockAndWeek(completedSessionCount) {
   return { block, weekInBlock, totalWeekNumber, sessionInWeek, completedSessionCount: count, ...getWeekMeta(weekInBlock) }
 }
 
+// Day ids that count toward the 5-sessions-per-week block/deload
+// progression. The optional day (Saturday active recovery) is deliberately
+// excluded — it's a bonus, not part of the training week.
+const REQUIRED_DAY_IDS = PROGRAM_DAYS.filter((d) => !d.optional).map((d) => d.id)
+
 // Counts completed sessions (completed_at is set — an abandoned/in-progress
 // session never got this far, so it can't accidentally trigger deload early).
-// Returns 0 if Supabase isn't configured yet (local/dev preview).
+// Only counts required days — completing the optional day never advances
+// the block/week. Returns 0 if Supabase isn't configured yet (local/dev
+// preview).
 export async function getCompletedSessionCount() {
   try {
     const { count, error } = await supabase
       .from('workout_sessions')
       .select('*', { count: 'exact', head: true })
       .not('completed_at', 'is', null)
+      .in('day_id', REQUIRED_DAY_IDS)
     if (error) throw error
     return count || 0
   } catch {
@@ -86,6 +94,69 @@ export const VOLUME_STATUS_COLORS = {
   low: 'var(--color-quad)',      // yellow-ish
   optimal: 'var(--color-back)',  // green-ish
   high: 'var(--color-glute)',    // red/accent
+}
+
+// ---- History tab --------------------------------------------------------------
+// Every completed session, most recent first — a flat chronological record
+// (no block/week grouping; that context already lives on the Home tab).
+export async function getCompletedSessions() {
+  try {
+    const { data, error } = await supabase
+      .from('workout_sessions')
+      .select('id, day_id, completed_at, duration_seconds, effort')
+      .eq('status', 'completed')
+      .order('completed_at', { ascending: false })
+    if (error) throw error
+    return data || []
+  } catch {
+    return []
+  }
+}
+
+// All logged sets across a batch of sessions in one query — used to compute
+// each History row's sets/volume summary up front, instead of an N+1 fetch
+// per session.
+export async function getExerciseLogsForSessions(sessionIds) {
+  if (!sessionIds.length) return []
+  try {
+    const { data, error } = await supabase
+      .from('exercise_logs')
+      .select('*')
+      .in('session_id', sessionIds)
+    if (error) throw error
+    return data || []
+  } catch {
+    return []
+  }
+}
+
+// One session's logged sets, grouped by exercise (in first-logged order),
+// each sorted by set_number — feeds the History tab's expand-to-drill-down
+// detail, mirroring groupLogsBySession's per-exercise sort but scoped to a
+// single session instead of across all of them. `originalName` is set only
+// when the logged exercise_name differs from the prescribed exercise (i.e.
+// an alternative was swapped in), so the UI can call that out explicitly.
+export function groupSessionLogsByExercise(logs) {
+  const order = []
+  const byExercise = new Map()
+  for (const log of logs) {
+    if (!byExercise.has(log.exercise_id)) {
+      byExercise.set(log.exercise_id, [])
+      order.push(log.exercise_id)
+    }
+    byExercise.get(log.exercise_id).push(log)
+  }
+  return order.map((exerciseId) => {
+    const sets = [...byExercise.get(exerciseId)].sort((a, b) => a.set_number - b.set_number)
+    const swappedName = sets[0].exercise_name
+    const originalName = findExerciseById(exerciseId)?.name || exerciseId
+    return {
+      exerciseId,
+      displayName: swappedName || originalName,
+      originalName: swappedName ? originalName : null,
+      sets,
+    }
+  })
 }
 
 // ---- Exercise lookups ---------------------------------------------------------
@@ -152,8 +223,11 @@ function sameDay(a, b) {
 // One entry per calendar day in the Mon-Sun week containing referenceDate:
 // { date, programDay, status }. status is 'rest' (weekend, no programDay),
 // 'completed', 'today', 'missed' (past scheduled day, nothing logged), or
-// 'upcoming'. Feeds both the Today card and the week strip so they always
-// agree on what happened when.
+// 'upcoming'. A programDay marked `optional` (Saturday active recovery)
+// never shows as 'missed' — skipping it is expected, not a failure, so a
+// past uncompleted optional day just reads 'upcoming' instead. Feeds both
+// the Today card and the week strip so they always agree on what happened
+// when.
 export async function getWeekSchedule(referenceDate = new Date()) {
   const weekDates = getWeekDates(referenceDate)
   const rangeEnd = new Date(weekDates[6])
@@ -169,7 +243,7 @@ export async function getWeekSchedule(referenceDate = new Date()) {
     if (!programDay) status = 'rest'
     else if (sessions.some((s) => s.day_id === programDay.id && sameDay(new Date(s.completed_at), date))) status = 'completed'
     else if (isToday) status = 'today'
-    else if (isPast) status = 'missed'
+    else if (isPast) status = programDay.optional ? 'upcoming' : 'missed'
     else status = 'upcoming'
 
     return { date, programDay, status }
@@ -193,14 +267,18 @@ export function getNextScheduledDay(schedule, referenceDate = new Date()) {
 }
 
 // Non-cardio exercise count + ordered muscle groups covered, for the Today
-// card's one-line summary.
+// card's one-line summary. cardioDuration is set when the day is cardio-only
+// (e.g. the optional Saturday day) so the card has something to show instead
+// of "0 exercises".
 export function getDaySummary(programDay) {
   const nonCardio = programDay.exercises.filter((ex) => !ex.isCardio)
   const musclesPresent = new Set(nonCardio.flatMap((ex) => ex.muscleGroups))
+  const cardioExercise = programDay.exercises.find((ex) => ex.isCardio)
   return {
     exerciseCount: nonCardio.length,
     muscles: MUSCLE_GROUPS.filter((mg) => musclesPresent.has(mg)),
-    hasCardio: programDay.exercises.some((ex) => ex.isCardio),
+    hasCardio: !!cardioExercise,
+    cardioDuration: nonCardio.length === 0 ? cardioExercise?.duration ?? null : null,
   }
 }
 
@@ -225,7 +303,10 @@ export async function getWorkoutsThisMonth(referenceDate = new Date()) {
 // Consecutive scheduled training days hit, counting back from referenceDate.
 // Rest days (weekends) don't break it; a scheduled day with nothing logged
 // does, unless that day is referenceDate itself (still in progress, not a
-// miss yet). Returned as a workout count, not a day count.
+// miss yet). The optional day (Saturday active recovery) is skipped
+// entirely here — it neither extends the streak when done nor breaks it
+// when skipped, same as a rest day. Returned as a workout count, not a day
+// count.
 export async function getCurrentStreak(referenceDate = new Date()) {
   const lookback = new Date(referenceDate)
   lookback.setDate(lookback.getDate() - 60)
@@ -239,7 +320,7 @@ export async function getCurrentStreak(referenceDate = new Date()) {
 
   while (cursor >= lookback) {
     const programDay = getProgramDayForWeekday(cursor.getDay())
-    if (programDay) {
+    if (programDay && !programDay.optional) {
       const hit = sessions.some((s) => s.day_id === programDay.id && sameDay(new Date(s.completed_at), cursor))
       if (hit) streak++
       else if (!sameDay(cursor, referenceDate)) break

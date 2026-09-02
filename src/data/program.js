@@ -43,8 +43,6 @@ export const BODYWEIGHT_EXERCISES = new Set([
 // starts blank and is self-calibrated in Week 1 (see getLastLogged in
 // helpers.js) — the app never guesses a number for her.
 export const SEEDED_WEIGHTS = {
-  'single-leg-db-hip-thrust': { weight: 20, unit: 'lb' },
-  'kb-sumo-deadlift': { weight: 70, unit: 'lb' },
   'reverse-lunge-smith': { weight: 25, unit: 'lb' }, // per side
   'lifted-heel-squat': { weight: 30, unit: 'lb' },
 }
@@ -99,7 +97,7 @@ export const RPE_EXPLAINER = {
 // Fixed weekday assignment: Day 1-5 always fall on Mon-Fri, in program order.
 // Weekdays use JS Date.getDay() convention (Sun=0...Sat=6). Weekends have no
 // entry here and are treated as rest days everywhere this is consumed.
-export const SCHEDULE_WEEKDAYS = [1, 2, 3, 4, 5] // Mon, Tue, Wed, Thu, Fri
+export const SCHEDULE_WEEKDAYS = [1, 2, 3, 4, 5, 6] // Mon, Tue, Wed, Thu, Fri, Sat (Sat = optional bonus day)
 
 export function getProgramDayForWeekday(weekday) {
   const index = SCHEDULE_WEEKDAYS.indexOf(weekday)
@@ -187,17 +185,17 @@ export const PROGRAM_DAYS = [
         ],
       },
       {
-        id: 'cardio-incline-walk-1',
-        name: 'Incline Treadmill Walk',
-        demoUrl: 'https://www.youtube.com/shorts/Y6CW8JFt3d8',
+        id: 'cardio-intervals-day1',
+        name: 'Row/Bike Intervals',
+        demoUrl: null,
         isCardio: true,
-        cardioType: 'steady-state',
-        duration: '12 min',
+        cardioType: 'intervals',
+        duration: '10-15 min (30s hard / 90s easy)',
         muscleGroups: [],
         alternatives: [
-          { name: 'Stationary Bike', demoUrl: 'https://www.youtube.com/shorts/wywdVLIdvMg' },
-          { name: 'StairMaster', demoUrl: 'https://www.youtube.com/shorts/2TCWTSuCC5I' },
-          { name: 'Elliptical', demoUrl: 'https://www.youtube.com/shorts/KRxofTVbTbM' },
+          { name: 'Rowing Machine', demoUrl: null },
+          { name: 'Assault Bike', demoUrl: null },
+          { name: 'Stationary Bike', demoUrl: null },
         ],
       },
     ],
@@ -223,21 +221,6 @@ export const PROGRAM_DAYS = [
         ],
       },
       {
-        id: 'single-leg-db-hip-thrust',
-        name: 'Single-Leg DB Hip Thrust',
-        demoUrl: 'https://www.youtube.com/shorts/3suM3LwVlVM',
-        sets: 3,
-        repRange: '10-12',
-        rpe: '7',
-        muscleGroups: ['glutes'],
-        alternatives: [
-          { name: 'Barbell Hip Thrust', demoUrl: 'https://www.youtube.com/shorts/-1cAnwFNBLg' },
-          { name: 'Smith Machine Hip Thrust', demoUrl: 'https://www.youtube.com/shorts/9JftONhm6g4' },
-          { name: 'Glute Bridge Machine', demoUrl: 'https://www.youtube.com/shorts/Mli3p6MHJCI' },
-        ],
-        note: 'Seeded from her last logged session.',
-      },
-      {
         id: 'romanian-deadlift',
         name: 'Romanian Deadlift',
         demoUrl: 'https://www.youtube.com/shorts/qBbB4pgOSS0',
@@ -249,20 +232,6 @@ export const PROGRAM_DAYS = [
           { name: 'KB Sumo Deadlift', demoUrl: 'https://www.youtube.com/shorts/xW5bN8LnQjY' },
           { name: 'DB RDL', demoUrl: 'https://www.youtube.com/shorts/wiekN4aIJ0g' },
           { name: 'Cable Pull-Through', demoUrl: 'https://www.youtube.com/shorts/d3sH6fbCBP0' },
-        ],
-      },
-      {
-        id: 'bulgarian-split-squat',
-        name: 'Bulgarian Split Squat',
-        demoUrl: 'https://www.youtube.com/shorts/9p5e2BSvoLs',
-        sets: 3,
-        repRange: '10-12 / leg',
-        rpe: '7',
-        muscleGroups: ['glutes', 'quads'],
-        alternatives: [
-          { name: 'Reverse Lunge (Smith)', demoUrl: 'https://www.youtube.com/shorts/D26udvEstHk' },
-          { name: 'Walking Lunge', demoUrl: 'https://www.youtube.com/shorts/2ea3_b9rFdM' },
-          { name: 'Step-Up', demoUrl: 'https://www.youtube.com/shorts/8q9LVgN2RD4' },
         ],
       },
       {
@@ -279,35 +248,6 @@ export const PROGRAM_DAYS = [
           { name: 'Step-Up', demoUrl: 'https://www.youtube.com/shorts/8q9LVgN2RD4' },
         ],
         note: 'Seeded from her last logged session.',
-      },
-      {
-        id: 'kb-sumo-deadlift',
-        name: 'KB Sumo Deadlift',
-        demoUrl: 'https://www.youtube.com/shorts/xW5bN8LnQjY',
-        sets: 3,
-        repRange: '10-12',
-        rpe: '7',
-        muscleGroups: ['glutes', 'hamstrings'],
-        alternatives: [
-          { name: 'DB Sumo Deadlift', demoUrl: 'https://www.youtube.com/shorts/GKaXQB8291w' },
-          { name: 'Barbell Sumo Deadlift', demoUrl: 'https://www.youtube.com/shorts/g-NddHVATPQ' },
-          { name: 'Cable Pull-Through', demoUrl: 'https://www.youtube.com/shorts/d3sH6fbCBP0' },
-        ],
-        note: 'Seeded from her last logged session.',
-      },
-      {
-        id: 'cable-kickback',
-        name: 'Cable Kickback',
-        demoUrl: 'https://www.youtube.com/shorts/hQKQZdCAntQ',
-        sets: 3,
-        repRange: '12-15 / leg',
-        rpe: '7',
-        muscleGroups: ['glutes'],
-        alternatives: [
-          { name: 'Glute Kickback Machine', demoUrl: 'https://www.youtube.com/shorts/3fBptAH0Rnw' },
-          { name: 'Banded Kickback', demoUrl: 'https://www.youtube.com/shorts/9vm-MKquuEo' },
-          { name: 'Donkey Kick (cable)', demoUrl: 'https://www.youtube.com/shorts/StQFsIfxrV4' },
-        ],
       },
       {
         id: 'seated-leg-curl',
@@ -402,12 +342,12 @@ export const PROGRAM_DAYS = [
         ],
       },
       {
-        id: 'cardio-incline-walk-2',
+        id: 'cardio-incline-walk-day3',
         name: 'Incline Treadmill Walk',
         demoUrl: null,
         isCardio: true,
         cardioType: 'steady-state',
-        duration: '12 min',
+        duration: '15-20 min',
         muscleGroups: [],
         alternatives: [
           { name: 'Stationary Bike', demoUrl: null },
@@ -501,7 +441,6 @@ export const PROGRAM_DAYS = [
     name: 'Full Body (Glutes + Arms)',
     shortLabel: 'Full',
     hasCardio: true,
-    cardioOptional: true,
     exercises: [
       {
         id: 'cable-glute-kickback-2',
@@ -561,17 +500,42 @@ export const PROGRAM_DAYS = [
         supersetGroup: 'day5-superset-2',
       },
       {
-        id: 'cardio-intervals-1',
-        name: 'Intervals (Bike or Row)',
+        id: 'cardio-intervals-day5',
+        name: 'Row/Bike Intervals',
         demoUrl: null,
         isCardio: true,
         cardioType: 'intervals',
-        duration: '10 min (30s hard / 90s easy)',
+        duration: '10-15 min (30s hard / 90s easy)',
         muscleGroups: [],
         alternatives: [
-          { name: 'Treadmill Intervals', demoUrl: null },
-          { name: 'StairMaster Intervals', demoUrl: null },
-          { name: 'Steady-state (swap if fatigued)', demoUrl: null },
+          { name: 'Rowing Machine', demoUrl: null },
+          { name: 'Assault Bike', demoUrl: null },
+          { name: 'Stationary Bike', demoUrl: null },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'day-6',
+    name: 'Optional Active Recovery',
+    shortLabel: 'Cardio',
+    hasCardio: true,
+    optional: true, // Bonus day — never required, never breaks the streak or
+    // counts toward the 5-sessions-per-week block/deload progression (see
+    // getCompletedSessionCount / getCurrentStreak in helpers.js).
+    exercises: [
+      {
+        id: 'cardio-incline-walk-optional',
+        name: 'Incline Treadmill Walk',
+        demoUrl: null,
+        isCardio: true,
+        cardioType: 'steady-state',
+        duration: '30-40 min',
+        muscleGroups: [],
+        alternatives: [
+          { name: 'Stationary Bike (steady-state)', demoUrl: null },
+          { name: 'Elliptical', demoUrl: null },
+          { name: 'StairMaster (steady pace)', demoUrl: null },
         ],
       },
     ],
