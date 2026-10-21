@@ -1,9 +1,11 @@
+import { useEffect } from 'react'
 import { HashRouter, Routes, Route, NavLink, useParams } from 'react-router-dom'
 import { LayoutDashboard, History as HistoryIcon, LineChart } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import WorkoutSession from './pages/WorkoutSession'
 import History from './pages/History'
 import Progress from './pages/Progress'
+import { runAutoClose } from './data/helpers'
 
 // Keying on dayId guarantees a clean remount whenever the session day
 // changes, so WorkoutSession can safely read its initial state straight
@@ -47,7 +49,22 @@ function NavBar() {
   )
 }
 
+// Closes forgotten in_progress sessions on app open and whenever the app
+// returns to the foreground (it can't run a timer while closed). Pages that
+// depend on session counts await afterAutoClose() before loading.
+function useAutoCloseSessions() {
+  useEffect(() => {
+    runAutoClose()
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') runAutoClose()
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [])
+}
+
 export default function App() {
+  useAutoCloseSessions()
   return (
     <HashRouter>
       <div className="min-h-screen pb-24 md:pb-0 md:pt-24">

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import TrendLineChart from './TrendLineChart'
-import { filterByTimeframe, logBodyWeight } from '../data/helpers'
+import BodyWeightForm from './BodyWeightForm'
+import { filterByTimeframe } from '../data/helpers'
 
 const TIMEFRAMES = [
   { value: '1m', label: '1M' },
@@ -19,8 +20,6 @@ function formatDateLabel(dateStr) {
 export default function BodyWeightPanel({ logs, onLogged }) {
   const [timeframe, setTimeframe] = useState('3m')
   const [showForm, setShowForm] = useState(false)
-  const [weightInput, setWeightInput] = useState('')
-  const [saving, setSaving] = useState(false)
 
   const current = logs.length ? logs[logs.length - 1] : null
   const first = logs.length ? logs[0] : null
@@ -30,24 +29,6 @@ export default function BodyWeightPanel({ logs, onLogged }) {
     date: formatDateLabel(log.logged_at),
     weight: log.weight,
   }))
-
-  async function handleSubmit(e) {
-    e.preventDefault()
-    const weight = Number(weightInput)
-    if (!weight) return
-    setSaving(true)
-    try {
-      await logBodyWeight(weight)
-      setWeightInput('')
-      setShowForm(false)
-      onLogged()
-    } catch (err) {
-      console.error('Failed to log weight:', err)
-      alert('Could not save — check Supabase is configured (src/lib/supabase.js).')
-    } finally {
-      setSaving(false)
-    }
-  }
 
   return (
     <div className="card rounded-[28px] p-5">
@@ -74,25 +55,14 @@ export default function BodyWeightPanel({ logs, onLogged }) {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="mt-4 flex items-center gap-2">
-          <input
-            type="number"
-            inputMode="decimal"
-            step="0.1"
-            placeholder="Weight (lb)"
-            value={weightInput}
-            onChange={(e) => setWeightInput(e.target.value)}
-            autoFocus
-            className="flex-1 bg-base-900 rounded-xl px-3 py-2.5 text-sm text-base-100 outline-none focus:ring-1 focus:ring-accent-start"
+        <div className="mt-4">
+          <BodyWeightForm
+            onSaved={() => {
+              setShowForm(false)
+              onLogged()
+            }}
           />
-          <button
-            type="submit"
-            disabled={saving}
-            className="accent-gradient text-white font-semibold text-sm rounded-xl px-4 py-2.5 disabled:opacity-60"
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </button>
-        </form>
+        </div>
       )}
 
       {logs.length > 1 ? (

@@ -8,8 +8,26 @@
 // ---- Personalization --------------------------------------------------------
 export const USER_NAME = 'Arlene'
 
+// ---- Block structure ----------------------------------------------------------
+// Block 01: 4 training days run as a queue (no fixed weekdays), 24 completed
+// sessions per block. Sessions 1-20 are progressive (weeks 1-5), sessions
+// 21-24 are the deload (week 6). Old pilot sessions are block 0 in Supabase;
+// every new session writes CURRENT_BLOCK.
+export const CURRENT_BLOCK = 1
+export const SESSIONS_PER_WEEK = 4
+export const WEEKS_PER_BLOCK = 6
+export const SESSIONS_PER_BLOCK = SESSIONS_PER_WEEK * WEEKS_PER_BLOCK // 24
+export const DELOAD_WEEK = 6
+export const GOAL_WEEK = 5 // goalWeight below is the target by the end of this week
+
+// Planned training weekdays (JS Date.getDay(): Sun=0...Sat=6) — Mon, Tue,
+// Thu, Fri. Display only (week strip highlighting): the queue, not the
+// weekday, decides what's next. A workout on any other day still counts,
+// and a missed planned day never skips content.
+export const PLANNED_WEEKDAYS = [1, 2, 4, 5]
+
 // ---- Muscle groups -------------------------------------------------------
-// Keys used everywhere volume is tallied (body diagram, weekly volume tab).
+// Keys used everywhere volume is tallied.
 export const MUSCLE_GROUPS = [
   'chest',
   'back',
@@ -22,44 +40,44 @@ export const MUSCLE_GROUPS = [
   'calves',
 ]
 
-// Weekly set-volume thresholds per muscle group, used to color the body
-// diagram and volume tracker. Defaults follow common hypertrophy research
-// ranges — adjust here if needed, nowhere else.
-export const VOLUME_THRESHOLDS = {
-  low: 8,   // < 8 sets/week -> 'low' (yellow)
-  high: 20, // > 20 sets/week -> 'high' (red)
-  // between low and high -> 'optimal' (green)
+// Weekly set-volume thresholds per muscle group, used for any volume
+// coloring. Groups without their own entry use `default`. Adjust here only.
+export const VOLUME_THRESHOLDS_BY_GROUP = {
+  default:   { low: 8, high: 20 },
+  biceps:    { low: 4, high: 14 },
+  triceps:   { low: 4, high: 14 },
+  calves:    { low: 4, high: 16 },
+  shoulders: { low: 6, high: 18 },
+}
+
+export function getVolumeThresholds(muscleGroup) {
+  return VOLUME_THRESHOLDS_BY_GROUP[muscleGroup] || VOLUME_THRESHOLDS_BY_GROUP.default
 }
 
 // Exercises that don't take an external weight (bodyweight movements).
 // Drives conditional UI (hides the weight input) for any exercise, present
 // or future, matched by name.
 export const BODYWEIGHT_EXERCISES = new Set([
-  // none in Block 1 — every current exercise is loaded
+  // none in Block 01 — every current exercise is loaded
 ])
 
-// ---- Seeded starting weights ----------------------------------------------
-// Real numbers from her most recent lower-body session. Everything else
-// starts blank and is self-calibrated in Week 1 (see getLastLogged in
-// helpers.js) — the app never guesses a number for her.
-export const SEEDED_WEIGHTS = {
-  'reverse-lunge-smith': { weight: 25, unit: 'lb' }, // per side
-  'lifted-heel-squat': { weight: 30, unit: 'lb' },
-}
-
-// ---- Rep range progression across a 4-week block --------------------------
-// Week 4 is always an auto-applied deload — no toggle, no override.
+// ---- Week metadata across a 6-week block ------------------------------------
+// Week 6 is always an auto-applied deload — no toggle, no override.
 // weekType: 'progressive' | 'deload'
 export function getWeekMeta(weekInBlock) {
   switch (weekInBlock) {
     case 1:
-      return { weekType: 'progressive', label: 'Week 1', volumeMultiplier: 1, rpeCap: 8, note: 'Baseline week.' }
+      return { weekType: 'progressive', label: 'Week 1', volumeMultiplier: 1, rpeCap: 8, note: 'Calibration week — find honest working weights.' }
     case 2:
-      return { weekType: 'progressive', label: 'Week 2', volumeMultiplier: 1, rpeCap: 8, note: 'Add weight where last week felt controlled.' }
+      return { weekType: 'progressive', label: 'Week 2', volumeMultiplier: 1, rpeCap: 8, note: 'Add reps first, then weight once you hit the top of the range.' }
     case 3:
-      return { weekType: 'progressive', label: 'Week 3', volumeMultiplier: 1, rpeCap: 8, note: 'Peak week — push another small jump.' }
+      return { weekType: 'progressive', label: 'Week 3', volumeMultiplier: 1, rpeCap: 8, note: 'Keep building — small jumps where the top of the range felt controlled.' }
     case 4:
-      return { weekType: 'deload', label: 'Week 4 (Deload)', volumeMultiplier: 0.5, rpeCap: 6, note: 'Deload — sets and weight are automatically reduced. Trust it.' }
+      return { weekType: 'progressive', label: 'Week 4', volumeMultiplier: 1, rpeCap: 8, note: 'Keep building — small jumps where the top of the range felt controlled.' }
+    case 5:
+      return { weekType: 'progressive', label: 'Week 5', volumeMultiplier: 1, rpeCap: 8, note: 'Goal week — aim for your block goal weights.' }
+    case DELOAD_WEEK:
+      return { weekType: 'deload', label: 'Week 6 (Deload)', volumeMultiplier: 0.5, rpeCap: 6, note: 'Deload — sets are automatically halved. Trust it.' }
     default:
       return { weekType: 'progressive', label: `Week ${weekInBlock}`, volumeMultiplier: 1, rpeCap: 8, note: '' }
   }
@@ -73,8 +91,27 @@ export function applyDeloadToSets(baseSets, weekInBlock) {
   return Math.max(2, Math.round(baseSets * 0.5))
 }
 
-// ---- Effort / session-note options -----------------------------------------
-// End-of-session quick tap. Logged for visibility only — no auto-adjustment.
+// ---- Effort / difficulty options ---------------------------------------------
+// End-of-session effort, 1-10, written to workout_sessions.session_rpe.
+// Anchors are display-only labels for ranges of the scale.
+export const SESSION_RPE_ANCHORS = [
+  { min: 1, max: 3, label: 'Easy' },
+  { min: 4, max: 6, label: 'Moderate' },
+  { min: 7, max: 8, label: 'Hard' },
+  { min: 9, max: 10, label: 'Max' },
+]
+
+// Last-set difficulty tap, shown per exercise. `rpe` is what gets written to
+// exercise_logs.rpe — only ever on the highest-numbered logged set of that
+// exercise in the session.
+export const LAST_SET_DIFFICULTY_OPTIONS = [
+  { value: '3+', label: '3+ left', rpe: 7 },
+  { value: '1-2', label: '1–2 left', rpe: 8.5 },
+  { value: '0', label: '0 left', rpe: 10 },
+]
+
+// Legacy (pilot) session effort tap. No longer written — kept only so
+// History can label the old workout_sessions.effort values.
 export const EFFORT_OPTIONS = [
   { value: 'easy', label: 'Easy' },
   { value: 'moderate', label: 'Moderate' },
@@ -82,37 +119,53 @@ export const EFFORT_OPTIONS = [
   { value: 'very_hard', label: 'Very Hard' },
 ]
 
-// ---- RPE explainer copy -----------------------------------------------------
+// ---- Set effort copy ----------------------------------------------------------
+// `cue` is the one-line target shown on every exercise card (the program's
+// rpe '7-8', in plain words); the explainer sits behind the info icon.
 export const RPE_EXPLAINER = {
-  title: 'What is RPE?',
+  cue: 'Finish each set with ~2–3 reps left',
+  title: 'How hard should sets feel?',
   body:
-    "RPE (Rate of Perceived Exertion) is a 1-10 scale for how hard a set felt. " +
-    "10 means you couldn't have done another rep. An RPE of 7-8 means you had " +
-    "about 2-3 reps left in the tank when you stopped. Logging RPE — not just " +
-    "weight — helps track true effort day to day, since the same weight can " +
-    "feel different depending on sleep, stress, or recovery.",
-}
-
-// ---- Weekly schedule ---------------------------------------------------------
-// Fixed weekday assignment: Day 1-5 always fall on Mon-Fri, in program order.
-// Weekdays use JS Date.getDay() convention (Sun=0...Sat=6). Weekends have no
-// entry here and are treated as rest days everywhere this is consumed.
-export const SCHEDULE_WEEKDAYS = [1, 2, 3, 4, 5, 6] // Mon, Tue, Wed, Thu, Fri, Sat (Sat = optional bonus day)
-
-export function getProgramDayForWeekday(weekday) {
-  const index = SCHEDULE_WEEKDAYS.indexOf(weekday)
-  return index === -1 ? null : PROGRAM_DAYS[index]
+    "Stop each set when you have about 2–3 good reps left in the tank — hard, " +
+    "but with clean form. After the last set of each exercise, tap how many " +
+    "reps you had left: 3+, 1–2, or 0. That tap (not just the weight) is what " +
+    "the app uses to decide when to suggest adding weight.",
 }
 
 // ---- The program ------------------------------------------------------------
-// Each exercise: id, name, sets, repRange, rpe, muscleGroups[], alternatives[],
-// isCardio, supersetGroup (optional, pairs exercises done back-to-back).
+// Days run as a queue in array order: Upper A -> Lower A -> Upper B -> Lower B.
+// Exercise order = priority (last items get dropped first if short on time).
+//
+// Each exercise: id (stable kebab-case of the name — the same movement on two
+// days shares an id), name, demoUrl, sets, repRange, rpe (display only),
+// muscleGroups[], alternatives[] (exactly 2, { name, demoUrl }),
+// supersetGroup (optional, pairs exercises done back-to-back), and
+// weight: { unit, startWeight, goalWeight, increment, confidence }.
+// Weights are per hand / per side for DB and unilateral movements.
+// confidence 'low' = no weight suggestion until she's logged it in 2 sessions.
+//
+// The 21 movements are locked for the block. Alternatives are only for
+// equipment or comfort problems; logs (and weights) are tracked per name.
+const LEG_PRESS_CALF_RAISE = {
+  id: 'leg-press-calf-raise',
+  name: 'Leg Press Calf Raise',
+  demoUrl: 'https://www.youtube.com/shorts/DqT1h2_hQJ4',
+  sets: 3,
+  repRange: '12-15',
+  rpe: '7-8',
+  muscleGroups: ['calves'],
+  alternatives: [
+    { name: 'Seated Calf Raise', demoUrl: 'https://www.youtube.com/shorts/qJjqt0Q2WqU' },
+    { name: 'Standing Calf Raise', demoUrl: 'https://www.youtube.com/shorts/B30JglFGx8Y' },
+  ],
+  weight: { unit: 'lb', startWeight: 60, goalWeight: 80, increment: 10, confidence: 'low' },
+}
+
 export const PROGRAM_DAYS = [
   {
     id: 'day-1',
-    name: 'Upper (Push Emphasis)',
-    shortLabel: 'Push',
-    hasCardio: true,
+    name: 'Upper A (Chest / Back)',
+    shortLabel: 'Upper A',
     exercises: [
       {
         id: 'db-bench-press',
@@ -123,10 +176,24 @@ export const PROGRAM_DAYS = [
         rpe: '7-8',
         muscleGroups: ['chest'],
         alternatives: [
-          { name: 'Smith Machine Bench Press', demoUrl: 'https://www.youtube.com/shorts/ZG4eV1yEq9A' },
           { name: 'Chest Press Machine', demoUrl: 'https://www.youtube.com/shorts/DgrjO44tWPs' },
-          { name: 'Hammer Strength Chest Press', demoUrl: 'https://www.youtube.com/shorts/Nbh72taMf4w' },
+          { name: 'Smith Machine Bench Press', demoUrl: 'https://www.youtube.com/shorts/ZG4eV1yEq9A' },
         ],
+        weight: { unit: 'lb', startWeight: 35, goalWeight: 40, increment: 5, confidence: 'high' },
+      },
+      {
+        id: 'lat-pulldown',
+        name: 'Lat Pulldown',
+        demoUrl: 'https://www.youtube.com/shorts/bNmvKpJSWKM',
+        sets: 3,
+        repRange: '10-12',
+        rpe: '7-8',
+        muscleGroups: ['back'],
+        alternatives: [
+          { name: 'Assisted Pull-Up Machine', demoUrl: 'https://www.youtube.com/shorts/JcGwiiGyYFA' },
+          { name: 'Close-Grip Pulldown', demoUrl: 'https://www.youtube.com/shorts/Buy_B0xBq1I' },
+        ],
+        weight: { unit: 'lb', startWeight: 90, goalWeight: 100, increment: 5, confidence: 'high' },
       },
       {
         id: 'seated-db-shoulder-press',
@@ -134,41 +201,27 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/2D0TyoHv_EY',
         sets: 3,
         repRange: '8-10',
-        rpe: '7',
+        rpe: '7-8',
         muscleGroups: ['shoulders'],
         alternatives: [
           { name: 'Machine Shoulder Press', demoUrl: 'https://www.youtube.com/shorts/6v4nrRVySj0' },
-          { name: 'Arnold Press', demoUrl: 'https://www.youtube.com/shorts/wRlIuexTowA' },
           { name: 'Smith Machine Overhead Press', demoUrl: 'https://www.youtube.com/shorts/kkNYgqvrAEc' },
         ],
+        weight: { unit: 'lb', startWeight: 15, goalWeight: 20, increment: 2.5, confidence: 'low' },
       },
       {
-        id: 'incline-db-press',
-        name: 'Incline DB Press',
-        demoUrl: 'https://www.youtube.com/shorts/8fXfwG4ftaQ',
+        id: 'seated-cable-row',
+        name: 'Seated Cable Row',
+        demoUrl: 'https://www.youtube.com/shorts/8QuMq1GMMng',
         sets: 3,
         repRange: '10-12',
-        rpe: '7',
-        muscleGroups: ['chest'],
+        rpe: '7-8',
+        muscleGroups: ['back'],
         alternatives: [
-          { name: 'Incline Machine Press', demoUrl: 'https://www.youtube.com/shorts/o0Ud3RU59hw' },
-          { name: 'Cable Incline Fly', demoUrl: 'https://www.youtube.com/shorts/8rjNPttLJcw' },
-          { name: 'Low-to-High Cable Fly', demoUrl: 'https://www.youtube.com/shorts/62AIwPBj8v4' },
+          { name: 'DB Row (bench-supported)', demoUrl: 'https://www.youtube.com/shorts/WkFX6_GxAs8' },
+          { name: 'Chest-Supported Row Machine', demoUrl: 'https://www.youtube.com/shorts/FTwvmczf7bE' },
         ],
-      },
-      {
-        id: 'cable-lateral-raise',
-        name: 'Cable Lateral Raise',
-        demoUrl: 'https://www.youtube.com/shorts/IcTyO2SyX14',
-        sets: 3,
-        repRange: '12-15',
-        rpe: '7',
-        muscleGroups: ['shoulders'],
-        alternatives: [
-          { name: 'DB Lateral Raise', demoUrl: 'https://www.youtube.com/shorts/Myim1WH6Qec' },
-          { name: 'Machine Lateral Raise', demoUrl: 'https://www.youtube.com/shorts/AVPP4MJ6HeQ' },
-          { name: 'Lean-Away Cable Raise', demoUrl: 'https://www.youtube.com/shorts/-_8jT_KQXbs' },
-        ],
+        weight: { unit: 'lb', startWeight: 55, goalWeight: 65, increment: 5, confidence: 'low' },
       },
       {
         id: 'tricep-rope-pushdown',
@@ -176,49 +229,207 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/IVoL1BAEY6M',
         sets: 3,
         repRange: '10-12',
-        rpe: '7',
+        rpe: '7-8',
         muscleGroups: ['triceps'],
         alternatives: [
-          { name: 'Overhead Cable Tricep Ext', demoUrl: 'https://www.youtube.com/shorts/7hx0-DZgdl8' },
           { name: 'DB Skull Crusher', demoUrl: 'https://www.youtube.com/shorts/WLQizQXoeIg' },
           { name: 'Tricep Dip Machine', demoUrl: 'https://www.youtube.com/shorts/8CvOC9Db3Yw' },
         ],
+        supersetGroup: 'day1-superset-a',
+        weight: { unit: 'lb', startWeight: 35, goalWeight: 40, increment: 5, confidence: 'high' },
       },
       {
-        id: 'cardio-intervals-day1',
-        name: 'Row/Bike Intervals',
-        demoUrl: null,
-        isCardio: true,
-        cardioType: 'intervals',
-        duration: '10-15 min (30s hard / 90s easy)',
-        muscleGroups: [],
+        id: 'db-bicep-curl',
+        name: 'DB Bicep Curl',
+        demoUrl: 'https://www.youtube.com/shorts/0OA-DqdTyZA',
+        sets: 3,
+        repRange: '10-12',
+        rpe: '7-8',
+        muscleGroups: ['biceps'],
         alternatives: [
-          { name: 'Rowing Machine', demoUrl: null },
-          { name: 'Assault Bike', demoUrl: null },
-          { name: 'Stationary Bike', demoUrl: null },
+          { name: 'EZ-Bar Curl', demoUrl: 'https://www.youtube.com/shorts/d2r5TCqnR4Y' },
+          { name: 'Preacher Curl Machine', demoUrl: 'https://www.youtube.com/shorts/Htw-s61mOw0' },
         ],
+        supersetGroup: 'day1-superset-a',
+        weight: { unit: 'lb', startWeight: 15, goalWeight: 20, increment: 2.5, confidence: 'high' },
       },
     ],
   },
   {
     id: 'day-2',
-    name: 'Lower (Glute / Hamstring Emphasis)',
-    shortLabel: 'Lower',
-    hasCardio: false,
+    name: 'Lower A (Quad / Glute)',
+    shortLabel: 'Lower A',
     exercises: [
       {
-        id: 'barbell-hip-thrust',
-        name: 'Barbell Hip Thrust',
-        demoUrl: 'https://www.youtube.com/shorts/-1cAnwFNBLg',
+        id: 'hack-squat-machine',
+        name: 'Hack Squat Machine',
+        demoUrl: 'https://www.youtube.com/shorts/g9i05umL5vc',
         sets: 4,
+        repRange: '10-12',
+        rpe: '7-8',
+        muscleGroups: ['quads'],
+        alternatives: [
+          { name: 'Pendulum Squat Machine', demoUrl: 'https://www.youtube.com/shorts/89pJBhEAizI' },
+          { name: 'Goblet Squat', demoUrl: 'https://www.youtube.com/shorts/t__Um6KjJkc' },
+        ],
+        weight: { unit: 'lb', startWeight: 110, goalWeight: 130, increment: 10, confidence: 'high' },
+      },
+      {
+        id: 'step-up',
+        name: 'Step-Up',
+        demoUrl: 'https://www.youtube.com/shorts/8q9LVgN2RD4',
+        sets: 3,
+        repRange: '10-12 / leg',
+        rpe: '7-8',
+        muscleGroups: ['quads', 'glutes'],
+        alternatives: [
+          { name: 'Reverse Lunge (Smith)', demoUrl: 'https://www.youtube.com/shorts/D26udvEstHk' },
+          { name: 'Bulgarian Split Squat', demoUrl: 'https://www.youtube.com/shorts/9p5e2BSvoLs' },
+        ],
+        weight: { unit: 'lb', startWeight: 30, goalWeight: 40, increment: 5, confidence: 'low' },
+      },
+      {
+        id: 'seated-leg-curl',
+        name: 'Seated Leg Curl',
+        demoUrl: 'https://www.youtube.com/shorts/xdbEG3xGLI8',
+        sets: 3,
+        repRange: '12-15',
+        rpe: '7-8',
+        muscleGroups: ['hamstrings'],
+        alternatives: [
+          { name: 'Lying Leg Curl', demoUrl: 'https://www.youtube.com/shorts/QwmpZXukkoQ' },
+          { name: 'Standing Single-Leg Curl', demoUrl: 'https://www.youtube.com/shorts/idvJj2g3AzE' },
+        ],
+        weight: { unit: 'lb', startWeight: 145, goalWeight: 160, increment: 5, confidence: 'high' },
+      },
+      {
+        id: 'cable-hip-abduction',
+        name: 'Cable Hip Abduction',
+        demoUrl: 'https://www.youtube.com/shorts/_UYW5ym1YKE',
+        sets: 3,
+        repRange: '15-20',
+        rpe: '7-8',
+        muscleGroups: ['glutes'],
+        alternatives: [
+          { name: 'Hip Abduction Machine', demoUrl: 'https://www.youtube.com/shorts/WOv7Aca6r-0' },
+          { name: 'Banded Lateral Walk', demoUrl: 'https://www.youtube.com/shorts/p55m0Hw7UoA' },
+        ],
+        weight: { unit: 'lb', startWeight: 30, goalWeight: 40, increment: 5, confidence: 'high' },
+      },
+      LEG_PRESS_CALF_RAISE,
+    ],
+  },
+  {
+    id: 'day-3',
+    name: 'Upper B (Back / Shoulder / Arm)',
+    shortLabel: 'Upper B',
+    exercises: [
+      {
+        id: 'incline-machine-press',
+        name: 'Incline Machine Press',
+        demoUrl: 'https://www.youtube.com/shorts/o0Ud3RU59hw',
+        sets: 4,
+        repRange: '10-12',
+        rpe: '7-8',
+        muscleGroups: ['chest'],
+        alternatives: [
+          { name: 'Incline DB Press', demoUrl: 'https://www.youtube.com/shorts/8fXfwG4ftaQ' },
+          { name: 'Cable Incline Fly', demoUrl: 'https://www.youtube.com/shorts/8rjNPttLJcw' },
+        ],
+        weight: { unit: 'lb', startWeight: 30, goalWeight: 35, increment: 5, confidence: 'low' },
+      },
+      {
+        id: 'db-single-arm-row',
+        name: 'DB Single-Arm Row',
+        demoUrl: 'https://www.youtube.com/shorts/H8jf3DwlIlo',
+        sets: 3,
+        repRange: '10-12 / side',
+        rpe: '7-8',
+        muscleGroups: ['back'],
+        alternatives: [
+          { name: 'Cable Single-Arm Row', demoUrl: 'https://www.youtube.com/shorts/bLVeOunB-c0' },
+          { name: 'Machine Row (single-arm)', demoUrl: 'https://www.youtube.com/shorts/Y5fGGU0WuNQ' },
+        ],
+        weight: { unit: 'lb', startWeight: 45, goalWeight: 50, increment: 5, confidence: 'high' },
+      },
+      {
+        id: 'rear-delt-fly',
+        name: 'Rear Delt Fly',
+        demoUrl: 'https://www.youtube.com/shorts/9WpNWAM782Y',
+        sets: 3,
+        repRange: '12-15',
+        rpe: '7-8',
+        muscleGroups: ['shoulders'],
+        alternatives: [
+          { name: 'Reverse Pec Deck', demoUrl: 'https://www.youtube.com/shorts/BmJHBBZRpZg' },
+          { name: 'Cable Rear Delt Fly', demoUrl: 'https://www.youtube.com/shorts/FeERX9UwspY' },
+        ],
+        weight: { unit: 'lb', startWeight: 10, goalWeight: 15, increment: 2.5, confidence: 'high' },
+      },
+      {
+        id: 'cable-lateral-raise',
+        name: 'Cable Lateral Raise',
+        demoUrl: 'https://www.youtube.com/shorts/IcTyO2SyX14',
+        sets: 3,
+        repRange: '12-15',
+        rpe: '7-8',
+        muscleGroups: ['shoulders'],
+        alternatives: [
+          { name: 'DB Lateral Raise', demoUrl: 'https://www.youtube.com/shorts/Myim1WH6Qec' },
+          { name: 'Machine Lateral Raise', demoUrl: 'https://www.youtube.com/shorts/AVPP4MJ6HeQ' },
+        ],
+        weight: { unit: 'lb', startWeight: 10, goalWeight: 12.5, increment: 2.5, confidence: 'high' },
+      },
+      {
+        id: 'overhead-cable-tricep-ext',
+        name: 'Overhead Cable Tricep Ext',
+        demoUrl: 'https://www.youtube.com/shorts/7hx0-DZgdl8',
+        sets: 3,
+        repRange: '10-12',
+        rpe: '7-8',
+        muscleGroups: ['triceps'],
+        alternatives: [
+          { name: 'DB Skull Crusher', demoUrl: 'https://www.youtube.com/shorts/WLQizQXoeIg' },
+          { name: 'Tricep Dip Machine', demoUrl: 'https://www.youtube.com/shorts/8CvOC9Db3Yw' },
+        ],
+        supersetGroup: 'day3-superset-b',
+        weight: { unit: 'lb', startWeight: 25, goalWeight: 30, increment: 5, confidence: 'low' },
+      },
+      {
+        id: 'cable-curl',
+        name: 'Cable Curl',
+        demoUrl: 'https://www.youtube.com/shorts/CrbTqNOlFgE',
+        sets: 3,
+        repRange: '10-12',
+        rpe: '7-8',
+        muscleGroups: ['biceps'],
+        alternatives: [
+          { name: 'EZ-Bar Curl', demoUrl: 'https://www.youtube.com/shorts/d2r5TCqnR4Y' },
+          { name: 'Preacher Curl Machine', demoUrl: 'https://www.youtube.com/shorts/Htw-s61mOw0' },
+        ],
+        supersetGroup: 'day3-superset-b',
+        weight: { unit: 'lb', startWeight: 20, goalWeight: 25, increment: 5, confidence: 'low' },
+      },
+    ],
+  },
+  {
+    id: 'day-4',
+    name: 'Lower B (Glute / Hamstring)',
+    shortLabel: 'Lower B',
+    exercises: [
+      {
+        id: 'smith-machine-hip-thrust',
+        name: 'Smith Machine Hip Thrust',
+        demoUrl: 'https://www.youtube.com/shorts/9JftONhm6g4',
+        sets: 3,
         repRange: '10-12',
         rpe: '7-8',
         muscleGroups: ['glutes'],
         alternatives: [
           { name: 'Single-Leg DB Hip Thrust', demoUrl: 'https://www.youtube.com/shorts/3suM3LwVlVM' },
-          { name: 'Smith Machine Hip Thrust', demoUrl: 'https://www.youtube.com/shorts/9JftONhm6g4' },
           { name: 'Glute Bridge Machine', demoUrl: 'https://www.youtube.com/shorts/Mli3p6MHJCI' },
         ],
+        weight: { unit: 'lb', startWeight: 90, goalWeight: 110, increment: 10, confidence: 'low' },
       },
       {
         id: 'romanian-deadlift',
@@ -229,168 +440,10 @@ export const PROGRAM_DAYS = [
         rpe: '7-8',
         muscleGroups: ['hamstrings', 'glutes'],
         alternatives: [
-          { name: 'KB Sumo Deadlift', demoUrl: 'https://www.youtube.com/shorts/xW5bN8LnQjY' },
           { name: 'DB RDL', demoUrl: 'https://www.youtube.com/shorts/wiekN4aIJ0g' },
           { name: 'Cable Pull-Through', demoUrl: 'https://www.youtube.com/shorts/d3sH6fbCBP0' },
         ],
-      },
-      {
-        id: 'reverse-lunge-smith',
-        name: 'Reverse Lunge (Smith)',
-        demoUrl: 'https://www.youtube.com/shorts/D26udvEstHk',
-        sets: 3,
-        repRange: '10-12 / leg',
-        rpe: '7',
-        muscleGroups: ['glutes', 'quads'],
-        alternatives: [
-          { name: 'Bulgarian Split Squat', demoUrl: 'https://www.youtube.com/shorts/9p5e2BSvoLs' },
-          { name: 'Walking Lunge', demoUrl: 'https://www.youtube.com/shorts/2ea3_b9rFdM' },
-          { name: 'Step-Up', demoUrl: 'https://www.youtube.com/shorts/8q9LVgN2RD4' },
-        ],
-        note: 'Seeded from her last logged session.',
-      },
-      {
-        id: 'seated-leg-curl',
-        name: 'Seated Leg Curl',
-        demoUrl: 'https://www.youtube.com/shorts/xdbEG3xGLI8',
-        sets: 3,
-        repRange: '12-15',
-        rpe: '7',
-        muscleGroups: ['hamstrings'],
-        alternatives: [
-          { name: 'Lying Leg Curl', demoUrl: 'https://www.youtube.com/shorts/QwmpZXukkoQ' },
-          { name: 'Standing Single-Leg Curl', demoUrl: 'https://www.youtube.com/shorts/idvJj2g3AzE' },
-          { name: 'Stability Ball Curl', demoUrl: 'https://www.youtube.com/shorts/VwkY1XBD_XI' },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'day-3',
-    name: 'Upper (Pull Emphasis)',
-    shortLabel: 'Pull',
-    hasCardio: true,
-    exercises: [
-      {
-        id: 'lat-pulldown',
-        name: 'Lat Pulldown',
-        demoUrl: 'https://www.youtube.com/shorts/bNmvKpJSWKM',
-        sets: 4,
-        repRange: '10-12',
-        rpe: '7-8',
-        muscleGroups: ['back'],
-        alternatives: [
-          { name: 'Assisted Pull-Up Machine', demoUrl: 'https://www.youtube.com/shorts/JcGwiiGyYFA' },
-          { name: 'Close-Grip Pulldown', demoUrl: 'https://www.youtube.com/shorts/Buy_B0xBq1I' },
-          { name: 'Straight-Arm Pulldown', demoUrl: 'https://www.youtube.com/shorts/zECTZHrvuMg' },
-        ],
-      },
-      {
-        id: 'seated-cable-row',
-        name: 'Seated Cable Row',
-        demoUrl: 'https://www.youtube.com/shorts/8QuMq1GMMng',
-        sets: 3,
-        repRange: '10-12',
-        rpe: '7',
-        muscleGroups: ['back'],
-        alternatives: [
-          { name: 'Chest-Supported Row Machine', demoUrl: 'https://www.youtube.com/shorts/FTwvmczf7bE' },
-          { name: 'DB Row (bench-supported)', demoUrl: 'https://www.youtube.com/shorts/WkFX6_GxAs8' },
-          { name: 'T-Bar Row', demoUrl: 'https://www.youtube.com/shorts/zAZQJYx9vrk' },
-        ],
-      },
-      {
-        id: 'db-single-arm-row',
-        name: 'DB Single-Arm Row',
-        demoUrl: 'https://www.youtube.com/shorts/H8jf3DwlIlo',
-        sets: 3,
-        repRange: '10-12 / side',
-        rpe: '7',
-        muscleGroups: ['back'],
-        alternatives: [
-          { name: 'Cable Single-Arm Row', demoUrl: 'https://www.youtube.com/shorts/bLVeOunB-c0' },
-          { name: 'Machine Row (single-arm)', demoUrl: 'https://www.youtube.com/shorts/Y5fGGU0WuNQ' },
-          { name: 'Kroc Row', demoUrl: 'https://www.youtube.com/shorts/NuYTR795PhY' },
-        ],
-      },
-      {
-        id: 'rear-delt-fly',
-        name: 'Rear Delt Fly',
-        demoUrl: 'https://www.youtube.com/shorts/9WpNWAM782Y',
-        sets: 3,
-        repRange: '12-15',
-        rpe: '7',
-        muscleGroups: ['shoulders'],
-        alternatives: [
-          { name: 'Reverse Pec Deck', demoUrl: 'https://www.youtube.com/shorts/BmJHBBZRpZg' },
-          { name: 'Cable Rear Delt Fly', demoUrl: 'https://www.youtube.com/shorts/FeERX9UwspY' },
-          { name: 'Face Pull', demoUrl: 'https://www.youtube.com/shorts/qEyoBOpvqR4' },
-        ],
-      },
-      {
-        id: 'db-bicep-curl',
-        name: 'DB Bicep Curl',
-        demoUrl: 'https://www.youtube.com/shorts/0OA-DqdTyZA',
-        sets: 3,
-        repRange: '10-12',
-        rpe: '7',
-        muscleGroups: ['biceps'],
-        alternatives: [
-          { name: 'Cable Curl', demoUrl: 'https://www.youtube.com/shorts/CrbTqNOlFgE' },
-          { name: 'EZ-Bar Curl', demoUrl: 'https://www.youtube.com/shorts/d2r5TCqnR4Y' },
-          { name: 'Preacher Curl Machine', demoUrl: 'https://www.youtube.com/shorts/Htw-s61mOw0' },
-        ],
-      },
-      {
-        id: 'cardio-incline-walk-day3',
-        name: 'Incline Treadmill Walk',
-        demoUrl: null,
-        isCardio: true,
-        cardioType: 'steady-state',
-        duration: '15-20 min',
-        muscleGroups: [],
-        alternatives: [
-          { name: 'Stationary Bike', demoUrl: null },
-          { name: 'StairMaster', demoUrl: null },
-          { name: 'Elliptical', demoUrl: null },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'day-4',
-    name: 'Lower (Quad / Glute Emphasis)',
-    shortLabel: 'Lower',
-    hasCardio: false,
-    exercises: [
-      {
-        id: 'lifted-heel-squat',
-        name: 'Lifted Heel Squat',
-        demoUrl: 'https://www.youtube.com/shorts/GtFJS_Bi39U',
-        sets: 4,
-        repRange: '10-12',
-        rpe: '7-8',
-        muscleGroups: ['quads', 'glutes'],
-        alternatives: [
-          { name: 'Smith Machine Squat', demoUrl: 'https://www.youtube.com/shorts/xU4cuTffVZc' },
-          { name: 'Back Squat', demoUrl: 'https://www.youtube.com/shorts/ZaSetOZFo-k' },
-          { name: 'Hack Squat Machine', demoUrl: 'https://www.youtube.com/shorts/g9i05umL5vc' },
-        ],
-        note: 'Seeded from her last logged session.',
-      },
-      {
-        id: 'walking-lunge',
-        name: 'Walking Lunge',
-        demoUrl: 'https://www.youtube.com/shorts/2ea3_b9rFdM',
-        sets: 3,
-        repRange: '10-12 / leg',
-        rpe: '7',
-        muscleGroups: ['quads', 'glutes'],
-        alternatives: [
-          { name: 'Reverse Lunge (Smith)', demoUrl: 'https://www.youtube.com/shorts/D26udvEstHk' },
-          { name: 'Step-Up', demoUrl: 'https://www.youtube.com/shorts/8q9LVgN2RD4' },
-          { name: 'Curtsy Lunge', demoUrl: 'https://www.youtube.com/shorts/quIDO9QkuBQ' },
-        ],
+        weight: { unit: 'lb', startWeight: 95, goalWeight: 115, increment: 5, confidence: 'high' },
       },
       {
         id: 'leg-press',
@@ -398,146 +451,29 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/nDh_BlnLCGc',
         sets: 3,
         repRange: '10-12',
-        rpe: '7',
+        rpe: '7-8',
         muscleGroups: ['quads'],
         alternatives: [
-          { name: 'Hack Squat', demoUrl: 'https://www.youtube.com/shorts/g9i05umL5vc' },
+          { name: 'Hack Squat Machine', demoUrl: 'https://www.youtube.com/shorts/g9i05umL5vc' },
           { name: 'Pendulum Squat Machine', demoUrl: 'https://www.youtube.com/shorts/89pJBhEAizI' },
-          { name: 'Goblet Squat', demoUrl: 'https://www.youtube.com/shorts/t__Um6KjJkc' },
         ],
+        weight: { unit: 'lb', startWeight: 290, goalWeight: 320, increment: 10, confidence: 'high' },
       },
       {
-        id: 'hip-abduction-machine',
-        name: 'Hip Abduction Machine',
-        demoUrl: 'https://www.youtube.com/shorts/WOv7Aca6r-0',
-        sets: 3,
-        repRange: '15-20',
-        rpe: '6-7',
-        muscleGroups: ['glutes'],
-        alternatives: [
-          { name: 'Banded Lateral Walk', demoUrl: 'https://www.youtube.com/shorts/p55m0Hw7UoA' },
-          { name: 'Cable Hip Abduction', demoUrl: 'https://www.youtube.com/shorts/_UYW5ym1YKE' },
-          { name: 'Standing Cable Kickback', demoUrl: 'https://www.youtube.com/shorts/gHYh76AGPL8' },
-        ],
-      },
-      {
-        id: 'standing-calf-raise',
-        name: 'Standing Calf Raise',
-        demoUrl: 'https://www.youtube.com/shorts/B30JglFGx8Y',
-        sets: 4,
-        repRange: '12-15',
-        rpe: '7',
-        muscleGroups: ['calves'],
-        alternatives: [
-          { name: 'Seated Calf Raise', demoUrl: 'https://www.youtube.com/shorts/qJjqt0Q2WqU' },
-          { name: 'Leg Press Calf Raise', demoUrl: 'https://www.youtube.com/shorts/DqT1h2_hQJ4' },
-          { name: 'Single-Leg Calf Raise', demoUrl: 'https://www.youtube.com/shorts/AYzJdDk-DvQ' },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'day-5',
-    name: 'Full Body (Glutes + Arms)',
-    shortLabel: 'Full',
-    hasCardio: true,
-    exercises: [
-      {
-        id: 'cable-glute-kickback-2',
+        id: 'cable-glute-kickback',
         name: 'Cable Glute Kickback',
         demoUrl: 'https://www.youtube.com/shorts/hQKQZdCAntQ',
         sets: 3,
         repRange: '12-15 / leg',
-        rpe: '7',
+        rpe: '7-8',
         muscleGroups: ['glutes'],
         alternatives: [
           { name: 'Glute Kickback Machine', demoUrl: 'https://www.youtube.com/shorts/3fBptAH0Rnw' },
           { name: 'Donkey Kick', demoUrl: 'https://www.youtube.com/shorts/XRmrRiIdR2o' },
-          { name: 'Banded Kickback', demoUrl: 'https://www.youtube.com/shorts/9vm-MKquuEo' },
         ],
+        weight: { unit: 'lb', startWeight: 50, goalWeight: 60, increment: 5, confidence: 'high' },
       },
-      {
-        id: 'kb-sumo-deadlift-2',
-        name: 'KB Sumo Deadlift',
-        demoUrl: 'https://www.youtube.com/shorts/xW5bN8LnQjY',
-        sets: 3,
-        repRange: '10-12',
-        rpe: '7',
-        muscleGroups: ['glutes', 'hamstrings'],
-        alternatives: [
-          { name: 'DB Sumo Deadlift', demoUrl: 'https://www.youtube.com/shorts/GKaXQB8291w' },
-          { name: 'Barbell Sumo Deadlift', demoUrl: 'https://www.youtube.com/shorts/g-NddHVATPQ' },
-          { name: 'Cable Pull-Through', demoUrl: 'https://www.youtube.com/shorts/d3sH6fbCBP0' },
-        ],
-        note: 'Seeded from her last logged session.',
-      },
-      {
-        id: 'db-curl-overhead-tricep-ext',
-        name: 'DB Curl + Overhead Tricep Ext',
-        demoUrl: 'https://www.youtube.com/shorts/gsTmzeGndt4',
-        sets: 3,
-        repRange: '10-12 each',
-        rpe: '7',
-        muscleGroups: ['biceps', 'triceps'],
-        alternatives: [
-          { name: 'Cable Curl + Rope Pushdown', demoUrl: 'https://www.youtube.com/watch?v=ILXttchI96k' },
-          { name: 'EZ-Bar Curl + DB Skull Crusher', demoUrl: 'https://www.youtube.com/watch?v=-9iJtiEyMf8' },
-        ],
-        supersetGroup: 'day5-superset-1',
-      },
-      {
-        id: 'hammer-curl-skull-crusher',
-        name: 'Hammer Curl + Skull Crusher',
-        demoUrl: 'https://www.youtube.com/watch?v=mGz8uyuA8YA',
-        sets: 3,
-        repRange: '10-12 each',
-        rpe: '7',
-        muscleGroups: ['biceps', 'triceps'],
-        alternatives: [
-          { name: 'Cross-Body Hammer Curl + Tricep Dip', demoUrl: 'https://www.youtube.com/watch?v=UepRb4X--WY' },
-          { name: 'Cable Hammer Curl + Overhead Rope Ext', demoUrl: 'https://www.youtube.com/watch?v=dkbFWTMHRiU' },
-        ],
-        supersetGroup: 'day5-superset-2',
-      },
-      {
-        id: 'cardio-intervals-day5',
-        name: 'Row/Bike Intervals',
-        demoUrl: null,
-        isCardio: true,
-        cardioType: 'intervals',
-        duration: '10-15 min (30s hard / 90s easy)',
-        muscleGroups: [],
-        alternatives: [
-          { name: 'Rowing Machine', demoUrl: null },
-          { name: 'Assault Bike', demoUrl: null },
-          { name: 'Stationary Bike', demoUrl: null },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'day-6',
-    name: 'Optional Active Recovery',
-    shortLabel: 'Cardio',
-    hasCardio: true,
-    optional: true, // Bonus day — never required, never breaks the streak or
-    // counts toward the 5-sessions-per-week block/deload progression (see
-    // getCompletedSessionCount / getCurrentStreak in helpers.js).
-    exercises: [
-      {
-        id: 'cardio-incline-walk-optional',
-        name: 'Incline Treadmill Walk',
-        demoUrl: null,
-        isCardio: true,
-        cardioType: 'steady-state',
-        duration: '30-40 min',
-        muscleGroups: [],
-        alternatives: [
-          { name: 'Stationary Bike (steady-state)', demoUrl: null },
-          { name: 'Elliptical', demoUrl: null },
-          { name: 'StairMaster (steady pace)', demoUrl: null },
-        ],
-      },
+      LEG_PRESS_CALF_RAISE,
     ],
   },
 ]

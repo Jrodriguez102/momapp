@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { findExerciseById, getBodyWeightLogs } from '../data/helpers'
+import { getBodyWeightLogs } from '../data/helpers'
 import BodyWeightPanel from '../components/BodyWeightPanel'
 import ExerciseProgressPanel from '../components/ExerciseProgressPanel'
 
@@ -29,8 +29,10 @@ export default function Progress() {
   // Any exercise that's actually been logged — never a fixed "key lifts"
   // list, so this stays accurate as program.js changes.
   const loggedExercises = useMemo(() => {
-    const ids = [...new Set(exerciseLogs.map((log) => log.exercise_id))]
-    return ids.map((id) => ({ id, name: findExerciseById(id)?.name || id }))
+    // Keyed by exercise_name: ids changed between the pilot and Block 01,
+    // names didn't, so this keeps one history per movement.
+    const names = [...new Set(exerciseLogs.map((log) => log.exercise_name).filter(Boolean))]
+    return names.map((name) => ({ id: name, name }))
   }, [exerciseLogs])
 
   useEffect(() => {

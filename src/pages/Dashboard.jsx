@@ -1,60 +1,87 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Flame } from 'lucide-react'
-import { USER_NAME } from '../data/program'
+import { USER_NAME, CURRENT_BLOCK, SESSIONS_PER_BLOCK } from '../data/program'
 import {
-  getCurrentBlockAndWeek,
-  getCompletedSessionCount,
+  getBlockState,
   getGreeting,
-  getWeekSchedule,
-  getNextScheduledDay,
+  getTrainingWeek,
   getWorkoutsThisMonth,
-  getCurrentStreak,
+  getWeeklyStreak,
   getAnyInProgressSession,
+  needsWeighIn,
+  afterAutoClose,
+  SESSIONS_AUTO_CLOSED_EVENT,
 } from '../data/helpers'
 import { getDailyQuote } from '../data/quotes'
 import TodayWorkoutCard from '../components/TodayWorkoutCard'
 import StatTile from '../components/StatTile'
 import WeekStrip from '../components/WeekStrip'
+import WeighInCard from '../components/WeighInCard'
+
+// "Not now" on the weigh-in card hides it for the rest of the day
+// (per-device convenience only).
+const WEIGH_IN_DISMISS_KEY = `block${CURRENT_BLOCK}:weigh-in-dismissed`
+
+function isWeighInDismissedToday() {
+  try {
+    return localStorage.getItem(WEIGH_IN_DISMISS_KEY) === new Date().toDateString()
+  } catch {
+    return false
+  }
+}
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const [weekMeta, setWeekMeta] = useState(null)
-  const [schedule, setSchedule] = useState(null)
-  const [monthCount, setMonthCount] = useState(0)
-  const [streak, setStreak] = useState(0)
-  const [inProgressSession, setInProgressSession] = useState(null)
+  const [data, setData] = useState(null)
+  const [showWeighIn, setShowWeighIn] = useState(false)
+
+  // Always after the auto-close check, so a forgotten session is closed and
+  // counted before the queue / block / week are computed.
+  const load = useCallback(async () => {
+    await afterAutoClose()
+    const [blockState, trainingWeek, monthCount, streak, inProgressSession, weighInDue] = await Promise.all([
+      getBlockState(),
+      getTrainingWeek(),
+      getWorkoutsThisMonth(),
+      getWeeklyStreak(),
+      getAnyInProgressSession(),
+      needsWeighIn(),
+    ])
+    return { blockState, trainingWeek, monthCount, streak, inProgressSession, weighInDue }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
-    async function load() {
-      const [sessionCount, sched, monthTotal, streakTotal, inProgress] = await Promise.all([
-        getCompletedSessionCount(),
-        getWeekSchedule(),
-        getWorkoutsThisMonth(),
-        getCurrentStreak(),
-        getAnyInProgressSession(),
-      ])
-      if (cancelled) return
-      setWeekMeta(getCurrentBlockAndWeek(sessionCount))
-      setSchedule(sched)
-      setMonthCount(monthTotal)
-      setStreak(streakTotal)
-      setInProgressSession(inProgress)
+    function refresh() {
+      load().then((next) => {
+        if (cancelled) return
+        setData(next)
+        setShowWeighIn(next.weighInDue && !isWeighInDismissedToday())
+      })
     }
-    load()
-    return () => { cancelled = true }
-  }, [])
+    refresh()
+    // A foreground auto-close changes the queue/stats — reload when it happens.
+    window.addEventListener(SESSIONS_AUTO_CLOSED_EVENT, refresh)
+    return () => {
+      cancelled = true
+      window.removeEventListener(SESSIONS_AUTO_CLOSED_EVENT, refresh)
+    }
+  }, [load])
 
-  if (!weekMeta || !schedule) return null
-
+  if (!data) return null
+  const { blockState, trainingWeek, monthCount, streak, inProgressSession } = data
   const today = new Date()
-  const todayEntry = schedule.find((entry) => entry.date.toDateString() === today.toDateString())
-  const nextEntry = getNextScheduledDay(schedule, today)
-  // Excludes the optional day (Saturday active recovery) — it's a bonus,
-  // not part of the required training week, so this stat stays "X/5".
-  const scheduledCount = schedule.filter((entry) => entry.programDay && !entry.programDay.optional).length
-  const completedThisWeek = schedule.filter((entry) => entry.status === 'completed' && !entry.programDay?.optional).length
+  const trainedToday = trainingWeek.days.some((d) => d.isToday && d.status === 'completed')
+
+  function dismissWeighIn() {
+    try {
+      localStorage.setItem(WEIGH_IN_DISMISS_KEY, new Date().toDateString())
+    } catch {
+      // storage unavailable — just hide it for this visit
+    }
+    setShowWeighIn(false)
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-4 pt-8 pb-4 space-y-5">
@@ -70,9 +97,10 @@ export default function Dashboard() {
 
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs font-medium text-base-400 card rounded-full px-3 py-1.5">
-          Block {weekMeta.block} · {weekMeta.label}
+          Block {blockState.block} · {blockState.label}
+          {!blockState.isBlockComplete && ` · Session ${blockState.sessionNumber}/${SESSIONS_PER_BLOCK}`}
         </span>
-        {weekMeta.weekType === 'deload' && (
+        {blockState.weekType === 'deload' && !blockState.isBlockComplete && (
           <span className="flex items-center gap-1 text-xs font-medium text-accent-end card rounded-full px-3 py-1.5">
             <Flame size={12} /> Deload week
           </span>
@@ -80,22 +108,24 @@ export default function Dashboard() {
       </div>
 
       <TodayWorkoutCard
-        todayEntry={todayEntry}
-        nextEntry={nextEntry}
+        blockState={blockState}
         inProgressSession={inProgressSession}
+        trainedToday={trainedToday}
         onStart={(dayId) => navigate(`/session/${dayId}`)}
       />
+
+      {showWeighIn && <WeighInCard onSaved={() => setShowWeighIn(false)} onDismiss={dismissWeighIn} />}
 
       <div className="grid grid-cols-3 gap-2">
         <StatTile value={monthCount} label="Workouts this month" dotColor="var(--color-base-400)" />
         <StatTile
           value={streak}
-          unit={streak === 1 ? 'workout' : 'workouts'}
+          unit={streak === 1 ? 'week' : 'weeks'}
           label="Current streak"
           dotColor="var(--color-back)"
         />
         <StatTile
-          value={`${completedThisWeek}/${scheduledCount}`}
+          value={`${trainingWeek.completedCount}/${trainingWeek.plannedCount}`}
           label="Training days this week"
           dotColor="var(--color-accent-start)"
         />
@@ -103,7 +133,7 @@ export default function Dashboard() {
 
       <div>
         <p className="text-xs font-medium text-base-400 mb-2">This week</p>
-        <WeekStrip schedule={schedule} onSelectDay={(dayId) => navigate(`/session/${dayId}`)} />
+        <WeekStrip days={trainingWeek.days} />
       </div>
     </div>
   )

@@ -1,40 +1,42 @@
 import { Check } from 'lucide-react'
 
-// Status -> chip treatment. 'completed' and 'today' reuse existing app
-// tokens (volume-status green, accent gradient) rather than new hues;
-// 'missed' is a soft tint of the same red used for high-volume warnings
-// elsewhere, kept gentle rather than alarming.
+// Status -> chip treatment. Display only: the queue (not the weekday)
+// decides what's next, so chips aren't tappable. 'completed' is any day
+// with a completed session (planned weekday or not); 'missed' is a soft
+// tint of the same red used for high-volume warnings, kept gentle.
 const CHIP_STYLES = {
   completed: 'bg-[var(--color-back)] text-white',
-  today: 'accent-gradient text-white',
-  upcoming: 'bg-base-900 text-base-400',
+  planned: 'bg-base-900 text-base-400',
   missed: 'bg-[var(--color-glute)]/10 text-[var(--color-glute)]',
   rest: 'bg-transparent text-base-400/30',
 }
 
-// schedule: getWeekSchedule() output, 7 entries Mon-Sun.
-export default function WeekStrip({ schedule, onSelectDay }) {
+function chipLabel(day) {
+  if (day.status === 'completed') return <Check size={12} />
+  if (day.status === 'planned') return day.isToday ? 'Today' : 'Train'
+  if (day.status === 'missed') return 'Missed'
+  return '–'
+}
+
+// days: getTrainingWeek().days, 7 entries Mon-Sun.
+export default function WeekStrip({ days }) {
   return (
     <div className="grid grid-cols-7 gap-1.5">
-      {schedule.map((entry) => {
-        const clickable = !!entry.programDay
-        const weekdayLabel = entry.date.toLocaleDateString(undefined, { weekday: 'narrow' })
-
+      {days.map((day) => {
+        const isTodayPlanned = day.isToday && day.status === 'planned'
         return (
-          <button
-            key={entry.date.toDateString()}
-            type="button"
-            disabled={!clickable}
-            onClick={() => clickable && onSelectDay(entry.programDay.id)}
-            className="flex flex-col items-center gap-1 disabled:cursor-default"
-          >
-            <span className="text-[10px] text-base-400 font-medium">{weekdayLabel}</span>
-            <span
-              className={`w-full rounded-xl py-2 text-[10px] font-bold flex items-center justify-center transition-opacity ${CHIP_STYLES[entry.status]} ${clickable ? 'hover:opacity-80' : ''}`}
-            >
-              {entry.status === 'completed' ? <Check size={12} /> : entry.programDay?.shortLabel ?? '–'}
+          <div key={day.date.toDateString()} className="flex flex-col items-center gap-1">
+            <span className={`text-[10px] font-medium ${day.isToday ? 'text-base-100' : 'text-base-400'}`}>
+              {day.date.toLocaleDateString(undefined, { weekday: 'narrow' })}
             </span>
-          </button>
+            <span
+              className={`w-full rounded-xl py-2 text-[10px] font-bold flex items-center justify-center ${
+                isTodayPlanned ? 'accent-gradient text-white' : CHIP_STYLES[day.status]
+              } ${day.isToday && !isTodayPlanned ? 'ring-1 ring-base-400/40' : ''}`}
+            >
+              {chipLabel(day)}
+            </span>
+          </div>
         )
       })}
     </div>
