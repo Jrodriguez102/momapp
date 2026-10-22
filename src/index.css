@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./ui/tokens.css";
 
 @theme {
   /* Reversed scale vs. the old dark theme: base-950 is now the lightest

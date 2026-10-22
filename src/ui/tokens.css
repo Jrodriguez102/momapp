@@ -1,0 +1,129 @@
+/* ============================================================================
+   DESIGN TOKENS — v1 mobile redesign (light theme only)
+   Semantic names, consumed as Tailwind utilities (bg-surface,
+   text-muted-foreground, rounded-card, text-page, px-gutter, size-tap, ...).
+   The color names follow shadcn/ui conventions (background, foreground,
+   primary, muted, accent, border, input, ring) so shadcn components work
+   unchanged; app-specific roles (success, warning, nav, ...) sit alongside.
+
+   The legacy base-* / accent-start / muscle-name tokens in index.css stay
+   until every screen has moved over, then they are removed.
+
+   Contrast (WCAG, vs. white unless noted): foreground 15.96, secondary 9.52,
+   muted 5.63 (4.86 on surface-muted), accent-foreground 5.50 on accent,
+   white on gradient 4.54 -> 6.01, success-foreground 6.38+ on its tints,
+   warning-foreground 6.64 on warning, nav-foreground 15.21 on nav.
+   ============================================================================ */
+
+@theme static {
+  /* ---- Surfaces ---- */
+  --color-background: #fff8f6;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f7ece9;
+  --color-border: #f1e1dd;
+  --color-border-strong: #e8d3ce;
+
+  /* ---- Text ---- */
+  --color-foreground: #2b1f1c;
+  --color-foreground-secondary: #5a3f39;
+  --color-muted-foreground: #7a625c;
+
+  /* ---- Coral accent ---- */
+  --color-primary: #b03a2f;
+  --color-primary-foreground: #ffffff;
+  --color-accent: #fdece9;
+  --color-accent-border: #f6cfc9;
+  --color-accent-foreground: #a93a30;
+  --color-accent-deep: #7a2a22;
+  --color-quote-from: #fde3de;
+  --color-quote-to: #fff1ee;
+
+  /* ---- Status ---- */
+  --color-success: #3f7d14;
+  --color-success-tint: #f2f8ea;
+  --color-success-tint-strong: #eef5e6;
+  --color-success-border: #d5e7c0;
+  --color-success-foreground: #2f6410;
+  --color-warning: #fff1d6;
+  --color-warning-foreground: #7a4b00;
+  --color-destructive: #a93a30;
+
+  /* ---- Nav and dark chips ---- */
+  --color-nav: #2b1f1c;
+  --color-nav-foreground: #fff8f6;
+
+  /* ---- Focus ---- */
+  --color-ring: #b03a2f;
+
+  /* ---- Radii (pills and buttons use rounded-full) ---- */
+  --radius-card: 28px;
+  --radius-card-sm: 24px;
+  --radius-row-lg: 20px;
+  --radius-row: 16px;
+
+  /* ---- Type scale (minimum 12px) ---- */
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 20px;
+  --text-body: 16px;
+  --text-body--line-height: 24px;
+  --text-title: 17px;
+  --text-title--line-height: 22px;
+  --text-title-lg: 19px;
+  --text-title-lg--line-height: 24px;
+  --text-input: 20px;
+  --text-input--line-height: 28px;
+  --text-heading: 22px;
+  --text-heading--line-height: 28px;
+  --text-stat: 26px;
+  --text-stat--line-height: 30px;
+  --text-page: 30px;
+  --text-page--line-height: 36px;
+  --text-display: 32px;
+  --text-display--line-height: 38px;
+  --text-hero: 38px;
+  --text-hero--line-height: 42px;
+
+  /* ---- Layout and touch sizes ---- */
+  --spacing-gutter: 20px; /* page side padding */
+  --spacing-gutter-tight: 16px; /* inside the workout screen */
+  --spacing-tap: 44px; /* minimum tap target */
+  --spacing-input: 52px; /* set-row inputs and check button */
+  --spacing-row: 64px; /* collapsed exercise row */
+  --spacing-nav: 66px; /* bottom nav height */
+
+  /* ---- Shadows (coral-tinted: hero + active exercise card only) ---- */
+  --shadow-hero: 0 14px 32px -10px rgb(176 58 47 / 0.45);
+  --shadow-raised: 0 10px 28px -12px rgb(176 58 47 / 0.3);
+  --shadow-nav: 0 10px 30px -8px rgb(43 31 28 / 0.4);
+  --shadow-popover: 0 8px 28px -6px rgb(43 31 28 / 0.18);
+}
+
+/* shadcn/ui role aliases, resolved at use time. */
+@theme inline {
+  --color-card: var(--color-surface);
+  --color-card-foreground: var(--color-foreground);
+  --color-popover: var(--color-surface);
+  --color-popover-foreground: var(--color-foreground);
+  --color-secondary: var(--color-surface-muted);
+  --color-secondary-foreground: var(--color-foreground);
+  --color-muted: var(--color-surface-muted);
+  --color-input: var(--color-border-strong);
+}
+
+/* Gradients aren't a Tailwind theme namespace, so they get utilities.
+   The start stop is #c94d41 (not the spec's #cc5044, which is 4.38:1 with
+   white) so white text passes 4.5:1 across the whole gradient. */
+:root {
+  --gradient-primary: linear-gradient(145deg, #c94d41, #b03a2f);
+  --gradient-quote: linear-gradient(145deg, var(--color-quote-from), var(--color-quote-to));
+}
+
+@utility bg-gradient-primary {
+  background-image: var(--gradient-primary);
+}
+
+@utility bg-gradient-quote {
+  background-image: var(--gradient-quote);
+}
