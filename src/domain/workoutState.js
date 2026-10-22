@@ -36,6 +36,17 @@ export function applyRestoredSwaps(draftSwaps, restoredSwaps) {
   return next
 }
 
+// Mirrors syncExerciseRpe for the screen's copy of one slot's rows: the
+// highest-numbered set carries `rpe`, every other set carries null. Keeps
+// the local rows' rpe equal to the DB, which removeLiveSet relies on to
+// move the tap when the set holding it is removed.
+export function withRpeOnTopSet(logsBySet, rpe) {
+  const setNumbers = Object.keys(logsBySet ?? {}).map(Number)
+  if (!setNumbers.length) return logsBySet ?? {}
+  const top = Math.max(...setNumbers)
+  return Object.fromEntries(setNumbers.map((n) => [n, { ...logsBySet[n], rpe: n === top ? rpe : null }]))
+}
+
 export function allLoggedRows(logs) {
   return Object.values(logs).flatMap((bySet) => Object.values(bySet))
 }

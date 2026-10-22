@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allLoggedRows, applyRestoredSwaps, getFinishAction, getRowCount, prefillWeights, restoreFromSessionLogs } from './workoutState'
+import { allLoggedRows, applyRestoredSwaps, getFinishAction, getRowCount, prefillWeights, restoreFromSessionLogs, withRpeOnTopSet } from './workoutState'
 import { findDayById } from './metrics'
 
 const DAY = findDayById('day-1')
@@ -40,6 +40,20 @@ describe('prefillWeights / getRowCount / allLoggedRows', () => {
 
   it('flattens logged rows', () => {
     expect(allLoggedRows({ a: { 1: 'r1', 2: 'r2' }, b: { 1: 'r3' } })).toEqual(['r1', 'r2', 'r3'])
+  })
+})
+
+describe('withRpeOnTopSet', () => {
+  it('puts the rpe on the highest set and clears the rest', () => {
+    const bySet = { 1: { id: 'a', rpe: 8.5 }, 3: { id: 'c', rpe: null }, 2: { id: 'b', rpe: null } }
+    expect(withRpeOnTopSet(bySet, 8.5)).toEqual({ 1: { id: 'a', rpe: null }, 2: { id: 'b', rpe: null }, 3: { id: 'c', rpe: 8.5 } })
+    expect(withRpeOnTopSet(bySet, null)[3].rpe).toBeNull()
+    expect(bySet[1].rpe).toBe(8.5) // not mutated
+  })
+
+  it('handles an empty slot', () => {
+    expect(withRpeOnTopSet({}, 7)).toEqual({})
+    expect(withRpeOnTopSet(undefined, 7)).toEqual({})
   })
 })
 

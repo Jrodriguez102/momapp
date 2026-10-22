@@ -212,12 +212,9 @@ describe('last-set difficulty (rpe sync)', () => {
     expect(db.tables.workout_sessions).toHaveLength(0)
   })
 
-  // KNOWN BUG (pre-existing, reported, not fixed in the extract-only
-  // commit): the row kept in state after a save never learns its rpe, so
-  // removing the set that holds the difficulty doesn't move it down — the
-  // tap is lost from the DB while the screen still shows it. `it.fails`
-  // passes while the bug exists; delete `.fails` once it's fixed.
-  it.fails('moves it back down when the set holding it is removed', async () => {
+  // Regression: the screen's rows used to never learn their rpe, so removing
+  // the set holding the tap didn't move it down (the DB lost it).
+  it('moves it back down when the set holding it is removed', async () => {
     const { result } = await mount()
     await benchSets(result, 2)
     await run(result, (ws) => ws.setDifficulty(BENCH, '1-2'))
@@ -225,6 +222,76 @@ describe('last-set difficulty (rpe sync)', () => {
     const top = result.current.logs['db-bench-press'][3]
     await run(result, (ws) => ws.removeSet(BENCH, top))
     expect(rpes()).toEqual([null, 8.5])
+  })
+
+  it('tap difficulty, log a higher set, remove it: exact rows left in the DB', async () => {
+    const { result } = await mount()
+    await run(result, (ws) => ws.logSet(BENCH, 0, { weight: '35', reps: '10' }))
+    await run(result, (ws) => ws.logSet(BENCH, 1, { weight: '35', reps: '9' }))
+    await run(result, (ws) => ws.setDifficulty(BENCH, '1-2'))
+    await run(result, (ws) => ws.logSet(BENCH, 2, { weight: '35', reps: '8' }))
+    expect(rpes()).toEqual([null, null, 8.5])
+
+    const sessionId = result.current.session.id
+    fake.queries.length = 0
+    await run(result, (ws) => ws.removeSet(BENCH, ws.logs['db-bench-press'][3]))
+
+    const pick = ({ session_id, exercise_id, exercise_name, set_number, weight, weight_unit, reps, rpe, is_cardio }) => ({
+      session_id, exercise_id, exercise_name, set_number, weight, weight_unit, reps, rpe, is_cardio,
+    })
+    expect(db.tables.exercise_logs.map(pick)).toEqual([
+      { session_id: sessionId, exercise_id: 'db-bench-press', exercise_name: 'DB Bench Press', set_number: 1, weight: 35, weight_unit: 'lb', reps: 10, rpe: null, is_cardio: false },
+      { session_id: sessionId, exercise_id: 'db-bench-press', exercise_name: 'DB Bench Press', set_number: 2, weight: 35, weight_unit: 'lb', reps: 9, rpe: 8.5, is_cardio: false },
+    ])
+    expect(db.tables.workout_sessions).toEqual([expect.objectContaining({ id: sessionId, status: 'in_progress' })])
+
+    // The writes the removal made: delete the row, re-home the tap with one
+    // rpe update on the new highest set, then the remaining-sets count.
+    const set2Id = logsFor('db-bench-press')[1].id
+    expect(fake.queries.map((q) => [q.table, q.ops.find((op) => ['delete', 'update', 'select'].includes(op.name)).name])).toEqual([
+      ['exercise_logs', 'delete'],
+      ['exercise_logs', 'select'],
+      ['exercise_logs', 'update'],
+      ['exercise_logs', 'select'],
+    ])
+    const update = fake.queries.find((q) => hasOp(q, 'update'))
+    expect(update.ops.map((op) => [op.name, ...op.args])).toEqual([
+      ['update', { rpe: 8.5 }],
+      ['eq', 'id', set2Id],
+    ])
+
+    // The screen's copy matches the DB.
+    expect(result.current.logs['db-bench-press'][2].rpe).toBe(8.5)
+    expect(result.current.difficulties['db-bench-press']).toBe('1-2')
+  })
+
+  it('moves the tap down when it was set directly on the top set', async () => {
+    const { result } = await mount()
+    await benchSets(result, 3)
+    await run(result, (ws) => ws.setDifficulty(BENCH, '0'))
+    await run(result, (ws) => ws.removeSet(BENCH, ws.logs['db-bench-press'][3]))
+    expect(rpes()).toEqual([null, 10])
+  })
+
+  it('writes no rpe update when the removed set did not hold the tap', async () => {
+    const { result } = await mount()
+    await benchSets(result, 3)
+    await run(result, (ws) => ws.setDifficulty(BENCH, '3+'))
+    fake.queries.length = 0
+    await run(result, (ws) => ws.removeSet(BENCH, ws.logs['db-bench-press'][1]))
+    expect(fake.queries.some((q) => hasOp(q, 'update'))).toBe(false)
+    expect(rpes()).toEqual([null, 7])
+  })
+
+  it('keeps the screen rows equal to the DB after every sync', async () => {
+    const { result } = await mount()
+    await benchSets(result, 2)
+    await run(result, (ws) => ws.setDifficulty(BENCH, '1-2'))
+    await run(result, (ws) => ws.logSet(BENCH, 2, { weight: '35', reps: '8' }))
+    const screenRpes = () => Object.values(result.current.logs['db-bench-press']).map((r) => r.rpe)
+    expect(screenRpes()).toEqual(rpes())
+    await run(result, (ws) => ws.setDifficulty(BENCH, null))
+    expect(screenRpes()).toEqual([null, null, null])
   })
 })
 

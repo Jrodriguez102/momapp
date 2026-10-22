@@ -27,6 +27,7 @@ import {
   getFinishAction,
   prefillWeights,
   restoreFromSessionLogs,
+  withRpeOnTopSet,
 } from '@/domain/workoutState'
 import { notifyError } from '@/ui/toast'
 import { clearDraft, loadDraft, saveDraft } from './workoutDraft'
@@ -216,9 +217,13 @@ export function useWorkoutSession(dayId) {
       })
       setLogs((prev) => ({ ...prev, [ex.id]: { ...prev[ex.id], [setNumber]: row } }))
       setEntry(ex.id, index, undefined)
-      // Keep the last-set difficulty on the highest logged set.
+      // Keep the last-set difficulty on the highest logged set (in the DB
+      // and in the rows kept here, so a later removal can move it down).
       const difficulty = difficulties[ex.id]
-      if (difficulty) await syncExerciseRpe(active.id, ex.id, difficultyToRpe(difficulty))
+      if (difficulty) {
+        const rpe = await syncExerciseRpe(active.id, ex.id, difficultyToRpe(difficulty))
+        setLogs((prev) => ({ ...prev, [ex.id]: withRpeOnTopSet(prev[ex.id], rpe) }))
+      }
       return true
     } catch (err) {
       console.error('Failed to save set:', err)
@@ -237,7 +242,8 @@ export function useWorkoutSession(dayId) {
       setLogs((prev) => {
         const bySet = { ...prev[ex.id] }
         delete bySet[row.set_number]
-        return { ...prev, [ex.id]: bySet }
+        // removeLiveSet moved the tap onto the new highest set; mirror it.
+        return { ...prev, [ex.id]: row.rpe != null ? withRpeOnTopSet(bySet, row.rpe) : bySet }
       })
       if (remainingForExercise === 0) {
         setDifficulties((prev) => {
@@ -264,7 +270,8 @@ export function useWorkoutSession(dayId) {
     const previous = difficulties[ex.id] ?? null
     setDifficulties((prev) => ({ ...prev, [ex.id]: value }))
     try {
-      await syncExerciseRpe(session.id, ex.id, difficultyToRpe(value))
+      const rpe = await syncExerciseRpe(session.id, ex.id, difficultyToRpe(value))
+      setLogs((prev) => ({ ...prev, [ex.id]: withRpeOnTopSet(prev[ex.id], rpe) }))
     } catch (err) {
       console.error('Failed to save difficulty:', err)
       setDifficulties((prev) => ({ ...prev, [ex.id]: previous }))
