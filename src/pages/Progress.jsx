@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../lib/supabase'
-import { getBodyWeightLogs } from '../data/helpers'
+import { getAllStrengthLogs, getBodyWeightLogs } from '../data/helpers'
 import BodyWeightPanel from '../components/BodyWeightPanel'
 import ExerciseProgressPanel from '../components/ExerciseProgressPanel'
 
@@ -11,16 +10,7 @@ export default function Progress() {
 
   useEffect(() => {
     async function load() {
-      try {
-        const { data, error } = await supabase
-          .from('exercise_logs')
-          .select('*')
-          .eq('is_cardio', false)
-          .order('logged_at', { ascending: true })
-        if (!error && data) setExerciseLogs(data)
-      } catch {
-        // Supabase not configured yet.
-      }
+      setExerciseLogs(await getAllStrengthLogs())
       setBodyWeightLogs(await getBodyWeightLogs())
     }
     load()
