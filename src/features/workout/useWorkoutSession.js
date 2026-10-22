@@ -357,6 +357,8 @@ export function useWorkoutSession(dayId) {
       }
       setResult({
         kind: 'finished',
+        sessionId: row.id,
+        sessionRpe: row.session_rpe ?? null,
         status: row.status,
         durationSeconds: row.duration_seconds ?? 0,
         setsCompleted: loggedRows.length,

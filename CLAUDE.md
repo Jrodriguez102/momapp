@@ -109,9 +109,12 @@ UI; pure parts in `src/domain/workoutState.js`):
   tap. Shown as "Easy / 3+ left", "Just right / 1–2 left", "Hard / 0 left"
   once ≥ 1 set is logged, highlighted after the final prescribed set. There is
   no per-set RPE input.
-- Session effort is a 1–10 tap (`EffortPicker`) written to `session_rpe` at
-  Finish (for now on the workout screen; the Workout complete step moves it
-  after Finish, saved with `updateSessionRpe`). The legacy `effort` column is never written (History still labels
+- Session effort is a 1–10 tap (`EffortPicker`) on the Workout complete
+  screen, after Finish: `useSessionEffort` saves it with `updateSessionRpe`
+  (session_rpe only, same write as History; saves queued so the latest pick
+  lands last). Skipping leaves it null. A failed save shows a toast with
+  Retry; the workout stays finished. `finishSession` still writes the draft's
+  `sessionRpe` (null unless an old draft carried a pick). The legacy `effort` column is never written (History still labels
   pilot values via `EFFORT_OPTIONS`).
 - Finish (`finishSession`, sticky bottom bar) is disabled at 0 sets. With < 6
   sets an AlertDialog asks "Only N sets logged" → "Count it" `completed` or

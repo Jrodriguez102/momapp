@@ -15,13 +15,11 @@ import {
   AlertDialogTitle,
 } from '@/ui/alert-dialog'
 import { Button } from '@/ui/button'
-import { Card } from '@/ui/card'
 import { EmptyState } from '@/ui/empty-state'
 import { ErrorState } from '@/ui/error-state'
 import { IconButton } from '@/ui/icon-button'
 import { Page } from '@/ui/page'
 import { LoadingState } from '@/ui/skeleton'
-import { EffortPicker } from './EffortPicker'
 import { ExerciseCard } from './ExerciseCard'
 import { ExerciseRow } from './ExerciseRow'
 import {
@@ -31,7 +29,7 @@ import {
   nextOpenSetNumber,
   prescribedSetsFor,
 } from './exerciseProgress'
-import { LegacyAutoClosedScreen, LegacyBlockCompleteScreen, LegacyFinishedScreen } from './LegacyResultScreens'
+import { BlockCompleteScreen, WorkoutClosedScreen, WorkoutCompleteScreen } from './ResultScreens'
 import { SwapSheet } from './SwapSheet'
 import { useWorkoutSession } from './useWorkoutSession'
 import { WorkoutTopBar } from './WorkoutTopBar'
@@ -140,8 +138,10 @@ export default function WorkoutPage() {
     )
   }
 
-  if (ws.result?.kind === 'finished') return <LegacyFinishedScreen day={day} result={ws.result} onHome={goHome} />
-  if (ws.result?.kind === 'auto-closed') return <LegacyAutoClosedScreen onHome={goHome} />
+  if (ws.result?.kind === 'finished') {
+    return <WorkoutCompleteScreen day={day} weekMeta={weekMeta} result={ws.result} onDone={goHome} />
+  }
+  if (ws.result?.kind === 'auto-closed') return <WorkoutClosedScreen onDone={goHome} />
 
   if (ws.otherSession) {
     const otherDay = findDayById(ws.otherSession.day_id)
@@ -162,7 +162,7 @@ export default function WorkoutPage() {
     )
   }
 
-  if (weekMeta.isBlockComplete && !ws.session) return <LegacyBlockCompleteScreen onHome={goHome} />
+  if (weekMeta.isBlockComplete && !ws.session) return <BlockCompleteScreen block={weekMeta.block} onDone={goHome} />
 
   const totalSets = exercises.reduce((sum, ex) => sum + prescribed(ex), 0)
   const swapExercise = swapTarget && exercises.find((ex) => ex.id === swapTarget)
@@ -229,11 +229,6 @@ export default function WorkoutPage() {
           })}
         </ol>
 
-        {/* Temporary home for the session effort until the Workout complete
-            screen takes it over (saved at Finish, as before). */}
-        <Card className="p-4">
-          <EffortPicker value={ws.sessionRpe} onChange={ws.setSessionRpe} disabled={ws.locked} />
-        </Card>
       </Page>
 
       <ActionBar>

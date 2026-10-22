@@ -5,18 +5,20 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { fake } from '@/test/fakeSupabase'
 import { createMemoryDb } from '@/test/memorySupabase'
+import HomePage from '@/features/home/HomePage'
+import { SESSIONS_AUTO_CLOSED_EVENT } from '@/services/autoClose'
 import WorkoutPage from './WorkoutPage'
 
 vi.mock('@/lib/supabase', async () => ({ supabase: (await import('@/test/fakeSupabase')).fake.client }))
 
 let db
 
-function renderWorkout(dayId = 'day-1') {
+function renderWorkout(dayId = 'day-1', home = <p>home page</p>) {
   return render(
     <MemoryRouter initialEntries={[`/session/${dayId}`]}>
       <Routes>
         <Route path="/session/:dayId" element={<WorkoutPage />} />
-        <Route path="/" element={<p>home page</p>} />
+        <Route path="/" element={home} />
       </Routes>
     </MemoryRouter>,
   )
@@ -163,7 +165,8 @@ describe('WorkoutPage', () => {
       fireEvent.click(within(dialog).getByRole('button', { name: 'Save as partial' }))
     })
     await waitFor(() => expect(db.tables.workout_sessions[0].status).toBe('partial'))
-    expect(await screen.findByText('Saved as Partial')).toBeTruthy()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Saved as partial' })).toBeTruthy()
+    expect(screen.getByText(/won’t count toward the block — Upper A stays next/)).toBeTruthy()
   })
 
   it('"Keep going" closes the finish dialog without writing', async () => {
@@ -198,5 +201,96 @@ describe('WorkoutPage', () => {
     await ready()
     fireEvent.click(screen.getByRole('button', { name: 'Back to Home' }))
     expect(screen.getByText('home page')).toBeTruthy()
+  })
+})
+
+describe('Workout complete', () => {
+  const minutesAgo = (m) => new Date(Date.now() - m * 60_000).toISOString()
+
+  // Upper A in progress: Bench 4 × 40 lb × 8 and Lat 2 × 90 lb × 10, first
+  // set 35 min ago, last 10 min ago -> 6 sets, 25:00, 1,280 + 1,800 lb.
+  function seedSixSets() {
+    db.tables.workout_sessions.push({ id: 'live', day_id: 'day-1', block: 1, week_in_block: 1, status: 'in_progress', started_at: minutesAgo(40) })
+    const row = (exerciseId, name, n, weight, reps, at) => ({
+      id: `${exerciseId}-${n}`, session_id: 'live', exercise_id: exerciseId, exercise_name: name, set_number: n,
+      weight, weight_unit: 'lb', reps, rpe: null, is_cardio: false, logged_at: minutesAgo(at),
+    })
+    db.tables.exercise_logs.push(
+      ...[35, 30, 25, 20].map((at, i) => row('db-bench-press', 'DB Bench Press', i + 1, 40, 8, at)),
+      ...[15, 10].map((at, i) => row('lat-pulldown', 'Lat Pulldown', i + 1, 90, 10, at)),
+    )
+  }
+
+  async function finishSix(home) {
+    seedSixSets()
+    renderWorkout('day-1', home)
+    await screen.findByRole('button', { name: 'Finish workout · 6 sets' })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Finish workout · 6 sets' }))
+    })
+    await screen.findByRole('heading', { level: 1, name: 'Workout complete' })
+  }
+
+  it('shows the right duration, sets and volume', async () => {
+    await finishSix()
+    expect(screen.getByText('Upper A · Session 1 of 24')).toBeTruthy()
+    expect(screen.getByText('Duration').parentElement.textContent).toBe('25:00Duration')
+    expect(screen.getByText('Sets logged').parentElement.textContent).toBe('6Sets logged')
+    expect(screen.getByText('Volume').parentElement.textContent).toBe('3,080lbVolume')
+    expect(db.tables.workout_sessions[0]).toMatchObject({ status: 'completed', duration_seconds: 25 * 60, session_rpe: null, closed_by: 'user' })
+  })
+
+  it('saves the effort after Finish into session_rpe only', async () => {
+    await finishSix()
+    const grid = screen.getByRole('group', { name: 'How hard was it overall?' })
+    await act(async () => {
+      fireEvent.click(within(grid).getByRole('button', { name: '7' }))
+    })
+    await waitFor(() => expect(db.tables.workout_sessions[0].session_rpe).toBe(7))
+    expect(db.tables.workout_sessions[0]).toMatchObject({ status: 'completed', duration_seconds: 25 * 60 })
+    expect(within(grid).getByRole('button', { name: '7' }).getAttribute('aria-pressed')).toBe('true')
+    await waitFor(() => expect(screen.getByText(/^7 of 10 · Hard/).textContent).toBe('7 of 10 · Hard · Saved'))
+  })
+
+  it('shows block progress and what is next', async () => {
+    await finishSix()
+    const card = screen.getByRole('region', { name: 'Block progress' })
+    await waitFor(() => expect(card.textContent).toContain('Next up: Lower A'))
+    expect(card.textContent).toContain('1 of 24 sessions')
+  })
+
+  it('Done returns Home with nothing left in progress', async () => {
+    await finishSix(<HomePage />)
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    // Trained today, so Home labels the hero "Next up".
+    const hero = await screen.findByRole('region', { name: 'Next up' }, { timeout: 3000 })
+    expect(within(hero).getByRole('heading', { name: 'Lower A' })).toBeTruthy()
+    expect(within(hero).getByRole('button', { name: 'Start workout' })).toBeTruthy()
+    expect(screen.queryByText(/Continue workout/)).toBeNull()
+    expect(screen.queryByText('Workout in progress')).toBeNull()
+    expect(localStorage.getItem('block1:session-in-progress-day-1')).toBeNull()
+  })
+
+  it('restyles the closed screen', async () => {
+    renderWorkout()
+    await ready()
+    await logSet(1, 10)
+    const id = db.tables.workout_sessions[0].id
+    act(() => {
+      window.dispatchEvent(new CustomEvent(SESSIONS_AUTO_CLOSED_EVENT, { detail: { sessionIds: [id] } }))
+    })
+    expect(screen.getByRole('heading', { level: 1, name: 'Workout closed' })).toBeTruthy()
+    expect(screen.getByText('Every set you logged is saved in History.')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Home' }))
+    expect(screen.getByText('home page')).toBeTruthy()
+  })
+
+  it('restyles the block-complete screen', async () => {
+    db.tables.workout_sessions.push(
+      ...Array.from({ length: 24 }, (_, i) => ({ id: `c${i}`, day_id: 'day-1', block: 1, week_in_block: 6, status: 'completed', completed_at: minutesAgo(60 * 24 * (i + 1)) })),
+    )
+    renderWorkout()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Block 01 complete' })).toBeTruthy()
+    expect(screen.getByText('All 24 sessions are done.')).toBeTruthy()
   })
 })
