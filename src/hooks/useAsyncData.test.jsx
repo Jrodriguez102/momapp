@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
-import { useAsyncData } from './useAsyncData'
+import { useAsyncData, LOAD_TIMEOUT_MS, LoadTimeoutError } from './useAsyncData'
 import { afterAutoClose, SESSIONS_AUTO_CLOSED_EVENT } from '@/services/autoClose'
 
 vi.mock('@/services/autoClose', () => ({
@@ -90,6 +90,62 @@ describe('useAsyncData', () => {
     await waitFor(() => expect(result.current.status).toBe('success'))
     act(() => result.current.setData((d) => ({ n: d.n + 1 })))
     expect(result.current.data).toEqual({ n: 2 })
+  })
+
+  describe('read timeout', () => {
+    beforeEach(() => vi.useFakeTimers())
+    afterEach(() => vi.useRealTimers())
+
+    const advance = (ms) => act(async () => {
+      await vi.advanceTimersByTimeAsync(ms)
+    })
+
+    it('shows the error after 8s when the load never finishes', async () => {
+      const { result } = renderHook(() => useAsyncData(() => new Promise(() => {})))
+      await advance(LOAD_TIMEOUT_MS - 1)
+      expect(result.current.status).toBe('loading')
+      await advance(1)
+      expect(result.current.status).toBe('error')
+      expect(result.current.error).toBeInstanceOf(LoadTimeoutError)
+    })
+
+    it('counts the auto-close wait toward the timeout', async () => {
+      afterAutoClose.mockImplementationOnce(() => new Promise(() => {}))
+      const load = vi.fn(() => Promise.resolve('x'))
+      const { result } = renderHook(() => useAsyncData(load, { waitForAutoClose: true }))
+      await advance(LOAD_TIMEOUT_MS)
+      expect(result.current.status).toBe('error')
+      expect(load).not.toHaveBeenCalled()
+    })
+
+    it('replaces the error with data that arrives late', async () => {
+      const late = deferred()
+      const { result } = renderHook(() => useAsyncData(() => late.promise))
+      await advance(LOAD_TIMEOUT_MS)
+      expect(result.current.status).toBe('error')
+      await act(async () => late.resolve('finally'))
+      expect(result.current).toMatchObject({ status: 'success', data: 'finally' })
+    })
+
+    it('ignores late data once Try again has started a new load', async () => {
+      const late = deferred()
+      const load = vi.fn().mockReturnValueOnce(late.promise).mockReturnValueOnce(new Promise(() => {}))
+      const { result } = renderHook(() => useAsyncData(load))
+      await advance(LOAD_TIMEOUT_MS)
+      act(() => result.current.reload())
+      expect(result.current.status).toBe('loading')
+      await act(async () => late.resolve('stale'))
+      expect(result.current.status).toBe('loading')
+    })
+
+    it('does not fire after a fast load, and can be disabled', async () => {
+      const { result } = renderHook(() => useAsyncData(() => Promise.resolve('fast')))
+      await advance(LOAD_TIMEOUT_MS * 2)
+      expect(result.current.status).toBe('success')
+      const { result: unlimited } = renderHook(() => useAsyncData(() => new Promise(() => {}), { timeoutMs: null }))
+      await advance(LOAD_TIMEOUT_MS * 4)
+      expect(unlimited.current.status).toBe('loading')
+    })
   })
 
   it('ignores a response that lands after unmount', async () => {

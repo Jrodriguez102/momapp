@@ -1,6 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { afterAutoClose, SESSIONS_AUTO_CLOSED_EVENT } from '@/services/autoClose'
 
+// supabase-js retries failed reads with backoff (~7s per query) and pages
+// wait for the auto-close check first, so offline a load can take 15s+ to
+// fail on its own. Give up on waiting after this long and show the error.
+export const LOAD_TIMEOUT_MS = 8000
+
+export class LoadTimeoutError extends Error {
+  constructor(ms) {
+    super(`Load took longer than ${ms}ms`)
+    this.name = 'LoadTimeoutError'
+  }
+}
+
+function withTimeout(promise, ms) {
+  let timer
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new LoadTimeoutError(ms)), ms)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+}
+
 // Loads data for a screen and tracks its state:
 //   { status: 'loading' | 'success' | 'error', data, error, reload, setData }
 // - `load` runs on mount and again whenever `key` changes (pass whatever
@@ -12,8 +32,14 @@ import { afterAutoClose, SESSIONS_AUTO_CLOSED_EVENT } from '@/services/autoClose
 // - waitForAutoClose: await the auto-close check first, so a forgotten
 //   session is closed and counted before anything is computed.
 // - reloadOnAutoClose: reload when a foreground auto-close closes sessions.
+// - timeoutMs: the whole load (including the auto-close wait) errors with
+//   LoadTimeoutError after this long (null = no limit). The requests keep
+//   going; if they still succeed, their data replaces the error.
 // - setData(updater) patches data locally after a successful write.
-export function useAsyncData(load, { key, waitForAutoClose = false, reloadOnAutoClose = false } = {}) {
+export function useAsyncData(
+  load,
+  { key, waitForAutoClose = false, reloadOnAutoClose = false, timeoutMs = LOAD_TIMEOUT_MS } = {},
+) {
   const [state, setState] = useState({ status: 'loading', data: undefined, error: null })
   const requestRef = useRef(0)
   const loadRef = useRef(load)
@@ -26,18 +52,30 @@ export function useAsyncData(load, { key, waitForAutoClose = false, reloadOnAuto
   const reload = useCallback(() => {
     const request = ++requestRef.current
     setState((prev) => (prev.data === undefined && prev.status !== 'loading' ? { ...prev, status: 'loading' } : prev))
+    const isCurrent = () => request === requestRef.current
+    const work = (async () => {
+      if (waitForAutoClose) await afterAutoClose()
+      return loadRef.current()
+    })()
     ;(async () => {
       try {
-        if (waitForAutoClose) await afterAutoClose()
-        const data = await loadRef.current()
-        if (request === requestRef.current) setState({ status: 'success', data, error: null })
+        const data = await (timeoutMs == null ? work : withTimeout(work, timeoutMs))
+        if (isCurrent()) setState({ status: 'success', data, error: null })
       } catch (error) {
-        if (request !== requestRef.current) return
+        if (!isCurrent()) return
         console.error('Failed to load:', error)
         setState((prev) => ({ status: 'error', data: prev.data, error }))
+        if (error instanceof LoadTimeoutError) {
+          work.then(
+            (data) => {
+              if (isCurrent()) setState({ status: 'success', data, error: null })
+            },
+            () => {}, // already showing the error
+          )
+        }
       }
     })()
-  }, [waitForAutoClose])
+  }, [waitForAutoClose, timeoutMs])
 
   useEffect(() => {
     reload()
