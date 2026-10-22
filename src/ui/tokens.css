@@ -127,3 +127,16 @@
 @utility bg-gradient-quote {
   background-image: var(--gradient-quote);
 }
+
+/* Visible keyboard focus for every interactive primitive. */
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Bottom padding that clears the iPhone home indicator. */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
