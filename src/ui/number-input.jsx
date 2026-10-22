@@ -18,7 +18,7 @@ export const NumberInput = forwardRef(function NumberInput(
       step={decimal ? 'any' : 1}
       aria-label={label}
       className={cn(
-        'h-input w-full min-w-0 rounded-row border-2 bg-surface px-3 text-center font-body text-input font-semibold text-foreground tabular-nums outline-none transition-colors',
+        'h-input w-full min-w-0 rounded-row border-2 bg-surface px-3 text-center font-body text-field font-semibold text-foreground tabular-nums outline-none transition-colors',
         'placeholder:text-body placeholder:font-normal placeholder:text-muted-foreground focus:border-primary disabled:bg-surface-muted disabled:opacity-60',
         '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
         active ? 'border-primary' : 'border-border-strong',

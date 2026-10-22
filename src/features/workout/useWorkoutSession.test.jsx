@@ -353,6 +353,40 @@ describe('finish decision', () => {
   })
 })
 
+describe('loading', () => {
+  it('reports a failed load instead of showing a fresh block, and retries', async () => {
+    fake.respond(() => ({ data: null, error: new Error('offline') }))
+    const { result } = renderHook(() => useWorkoutSession('day-1'))
+    await waitFor(() => expect(result.current.loadError).toBeTruthy())
+    expect(result.current.ready).toBe(false)
+
+    fake.respond(db.respond)
+    act(() => result.current.retryLoad())
+    expect(result.current.loadError).toBeNull()
+    await waitFor(() => expect(result.current.ready).toBe(true))
+    expect(result.current.weekMeta.sessionNumber).toBe(1)
+  })
+
+  it('gives up waiting after 8 seconds', async () => {
+    vi.useFakeTimers()
+    try {
+      // Every read hangs: a thenable that never settles.
+      fake.respond(() => ({ then() {} }))
+      const { result } = renderHook(() => useWorkoutSession('day-1'))
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(7999)
+      })
+      expect(result.current.loadError).toBeNull()
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1)
+      })
+      expect(result.current.loadError?.name).toBe('LoadTimeoutError')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
 describe('auto-close while open', () => {
   it('stops logging and clears the draft when this session is auto-closed', async () => {
     const { result } = await mount()

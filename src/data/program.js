@@ -104,10 +104,12 @@ export const SESSION_RPE_ANCHORS = [
 // Last-set difficulty tap, shown per exercise. `rpe` is what gets written to
 // exercise_logs.rpe — only ever on the highest-numbered logged set of that
 // exercise in the session.
+// `feel` is the workout screen's chip title (with `label` under it); the
+// saved value is always `rpe`.
 export const LAST_SET_DIFFICULTY_OPTIONS = [
-  { value: '3+', label: '3+ left', rpe: 7 },
-  { value: '1-2', label: '1–2 left', rpe: 8.5 },
-  { value: '0', label: '0 left', rpe: 10 },
+  { value: '3+', label: '3+ left', feel: 'Easy', rpe: 7 },
+  { value: '1-2', label: '1–2 left', feel: 'Just right', rpe: 8.5 },
+  { value: '0', label: '0 left', feel: 'Hard', rpe: 10 },
 ]
 
 // Legacy (pilot) session effort tap. No longer written — kept only so

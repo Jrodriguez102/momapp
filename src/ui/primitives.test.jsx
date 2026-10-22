@@ -81,7 +81,7 @@ describe('SegmentedControl', () => {
 })
 
 describe('NumberInput', () => {
-  it('is labelled, uses the right keypad, and uses the 20px input size', () => {
+  it('is labelled, uses the right keypad, and uses the 20px field size', () => {
     render(
       <>
         <NumberInput label="Set 1 weight" />
@@ -91,7 +91,7 @@ describe('NumberInput', () => {
     const weight = screen.getByLabelText('Set 1 weight')
     expect(weight.getAttribute('inputmode')).toBe('decimal')
     expect(screen.getByLabelText('Set 1 reps').getAttribute('inputmode')).toBe('numeric')
-    expect(weight.className).toContain('text-input')
+    expect(weight.className).toContain('text-field')
   })
 })
 

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { buildBlockState } from './block'
+import { buildBlockState, getCurrentBlockAndWeek } from './block'
+import { getExerciseSuggestion } from './progression'
+import { findExerciseById } from './metrics'
 import { getAutoCloseDecision, getFinishStatus, getSetSpanSeconds, AUTO_CLOSE_IDLE_MS, AUTO_CLOSE_MAX_MS } from './sessionRules'
 import { isWeighInDue, getWeekRange, getMonthRange, WEIGH_IN_INTERVAL_MS } from './calendar'
 
@@ -73,5 +75,25 @@ describe('isWeighInDue', () => {
     expect(isWeighInDue(null, now)).toBe(true)
     expect(isWeighInDue(new Date(now.getTime() - WEIGH_IN_INTERVAL_MS).toISOString(), now)).toBe(true)
     expect(isWeighInDue(new Date(now.getTime() - WEIGH_IN_INTERVAL_MS + 1).toISOString(), now)).toBe(false)
+  })
+})
+
+describe('getExerciseSuggestion lastReps', () => {
+  const bench = findExerciseById('db-bench-press')
+  const weekMeta = getCurrentBlockAndWeek(8)
+  const logs = [9, 10, 8, 8].map((reps, i) => ({
+    session_id: 's1', exercise_name: 'DB Bench Press', set_number: i + 1, weight: 35, reps, rpe: null,
+    logged_at: '2026-10-19T16:00:00.000Z',
+  }))
+
+  it("reports the best reps at last time's working weight (display only)", () => {
+    expect(getExerciseSuggestion({ exercise: bench, activeName: bench.name, logs, weekMeta, recentCompletedCount: 3 })).toMatchObject({
+      lastWeight: 35,
+      lastReps: 10,
+    })
+    expect(getExerciseSuggestion({ exercise: bench, activeName: bench.name, logs: [], weekMeta, recentCompletedCount: 3 })).toMatchObject({
+      lastWeight: null,
+      lastReps: null,
+    })
   })
 })

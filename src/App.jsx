@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { HashRouter, Routes, Route, useParams } from 'react-router-dom'
 import HomePage from '@/features/home/HomePage'
-import WorkoutSession from './pages/WorkoutSession'
+import WorkoutPage from '@/features/workout/WorkoutPage'
 import History from './pages/History'
 import Progress from './pages/Progress'
 import { runAutoClose } from './data/helpers'
@@ -9,11 +9,11 @@ import { AppShell } from '@/app/AppShell'
 import { Toaster } from '@/ui/sonner'
 
 // Keying on dayId guarantees a clean remount whenever the session day
-// changes, so WorkoutSession can safely read its initial state straight
+// changes, so WorkoutPage (useWorkoutSession) can read its draft straight
 // from storage (no restore-then-overwrite race between effects).
 function WorkoutSessionRoute() {
   const { dayId } = useParams()
-  return <WorkoutSession key={dayId} />
+  return <WorkoutPage key={dayId} />
 }
 
 // Closes forgotten in_progress sessions on app open and whenever the app

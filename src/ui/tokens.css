@@ -72,8 +72,8 @@
   --text-title--line-height: 22px;
   --text-title-lg: 19px;
   --text-title-lg--line-height: 24px;
-  --text-input: 20px;
-  --text-input--line-height: 28px;
+  --text-field: 20px; /* number inputs; not "input" — that name is the shadcn input-border color */
+  --text-field--line-height: 28px;
   --text-heading: 22px;
   --text-heading--line-height: 28px;
   --text-stat: 26px;
@@ -144,6 +144,16 @@
 /* The floating bottom nav sits this far above the bottom edge... */
 @utility bottom-nav-offset {
   bottom: calc(var(--spacing-gutter-tight) + env(safe-area-inset-bottom));
+}
+
+/* A sticky bottom action bar: 52px button + padding, above the home
+   indicator. Pages using one pad by its height plus breathing room. */
+@utility pb-action-bar {
+  padding-bottom: calc(var(--spacing-gutter-tight) * 0.75 + env(safe-area-inset-bottom));
+}
+
+@utility pb-action-bar-clearance {
+  padding-bottom: calc(var(--spacing-input) + 3 * var(--spacing-gutter-tight) + env(safe-area-inset-bottom));
 }
 
 /* ...so scrolling pages pad by nav height + offset + breathing room. */

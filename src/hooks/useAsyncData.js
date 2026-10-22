@@ -13,7 +13,7 @@ export class LoadTimeoutError extends Error {
   }
 }
 
-function withTimeout(promise, ms) {
+export function withTimeout(promise, ms) {
   let timer
   const timeout = new Promise((_, reject) => {
     timer = setTimeout(() => reject(new LoadTimeoutError(ms)), ms)

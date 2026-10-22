@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  fetchAnyInProgressSession,
+  fetchCompletedSessionCount,
+  fetchInProgressSession,
+  fetchRecentCompletedSessionCount,
+} from '@/services/sessionsApi'
+import { fetchProgressionLogs, fetchSessionExerciseLogs } from '@/services/setsApi'
+import { LOAD_TIMEOUT_MS, LoadTimeoutError, withTimeout } from '@/hooks/useAsyncData'
+import {
   findDayById,
   getCurrentBlockAndWeek,
-  getCompletedSessionCount,
-  findInProgressSession,
-  getAnyInProgressSession,
-  getSessionExerciseLogs,
-  getProgressionLogs,
-  getRecentCompletedSessionCount,
   getExerciseSuggestion,
   createSession,
   saveSet,
@@ -58,26 +60,20 @@ export function useWorkoutSession(dayId) {
   const [finishing, setFinishing] = useState(false)
   const [result, setResult] = useState(null) // { kind: 'finished', ... } | { kind: 'auto-closed' }
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [loadError, setLoadError] = useState(null)
+  const [loadAttempt, setLoadAttempt] = useState(0)
   const sessionPromiseRef = useRef(null)
 
   // Load everything after the auto-close check, so a forgotten session is
-  // closed (and counted) before week/queue math and resume happen.
+  // closed (and counted) before week/queue math and resume happen. Reads
+  // throw: if they fail, or take longer than LOAD_TIMEOUT_MS, loadError is
+  // set (and retryLoad tries again) instead of showing a fresh-block screen.
+  // Data that still arrives after a timeout is applied.
   useEffect(() => {
     if (!day) return
     let cancelled = false
-    async function load() {
-      await afterAutoClose()
-      const names = day.exercises.flatMap((ex) => [ex.name, ...ex.alternatives.map((a) => a.name)])
-      const [count, existing, anyOpen, progressionLogs, recentCompletedCount] = await Promise.all([
-        getCompletedSessionCount(),
-        findInProgressSession(day.id),
-        getAnyInProgressSession(),
-        getProgressionLogs(names),
-        getRecentCompletedSessionCount(),
-      ])
-      const rows = existing ? await getSessionExerciseLogs(existing.id) : []
-      if (cancelled) return
 
+    function apply({ count, existing, anyOpen, progressionLogs, recentCompletedCount, rows }) {
       if (existing) {
         const restored = restoreFromSessionLogs(day, rows)
         setSession(existing)
@@ -91,12 +87,45 @@ export function useWorkoutSession(dayId) {
         progressionLogs,
         recentCompletedCount,
       })
+      setLoadError(null)
     }
-    load()
+
+    const work = (async () => {
+      await afterAutoClose()
+      const names = day.exercises.flatMap((ex) => [ex.name, ...ex.alternatives.map((a) => a.name)])
+      const [count, existing, anyOpen, progressionLogs, recentCompletedCount] = await Promise.all([
+        fetchCompletedSessionCount(),
+        fetchInProgressSession(day.id),
+        fetchAnyInProgressSession(),
+        fetchProgressionLogs(names),
+        fetchRecentCompletedSessionCount(),
+      ])
+      const rows = existing ? await fetchSessionExerciseLogs(existing.id) : []
+      return { count, existing, anyOpen, progressionLogs, recentCompletedCount, rows }
+    })()
+
+    work.then(
+      (data) => {
+        if (!cancelled) apply(data)
+      },
+      (err) => {
+        if (cancelled) return
+        console.error('Failed to load workout:', err)
+        setLoadError(err)
+      },
+    )
+    withTimeout(work, LOAD_TIMEOUT_MS).catch((err) => {
+      if (!cancelled && err instanceof LoadTimeoutError) setLoadError(err)
+    })
     return () => {
       cancelled = true
     }
-  }, [day])
+  }, [day, loadAttempt])
+
+  function retryLoad() {
+    setLoadError(null)
+    setLoadAttempt((n) => n + 1)
+  }
 
   // Persist the draft on every change (until the session is finished).
   useEffect(() => {
@@ -265,17 +294,20 @@ export function useWorkoutSession(dayId) {
     }
   }
 
+  // Resolves true once saved.
   async function setDifficulty(ex, value) {
-    if (!session) return
+    if (!session) return false
     const previous = difficulties[ex.id] ?? null
     setDifficulties((prev) => ({ ...prev, [ex.id]: value }))
     try {
       const rpe = await syncExerciseRpe(session.id, ex.id, difficultyToRpe(value))
       setLogs((prev) => ({ ...prev, [ex.id]: withRpeOnTopSet(prev[ex.id], rpe) }))
+      return true
     } catch (err) {
       console.error('Failed to save difficulty:', err)
       setDifficulties((prev) => ({ ...prev, [ex.id]: previous }))
       notifyError('Could not save that — check your connection and try again.')
+      return false
     }
   }
 
@@ -346,6 +378,8 @@ export function useWorkoutSession(dayId) {
   return {
     day,
     ready: !!loaded,
+    loadError: loaded ? null : loadError,
+    retryLoad,
     weekMeta: loaded?.weekMeta ?? null,
     otherSession: loaded?.otherSession ?? null,
     session,

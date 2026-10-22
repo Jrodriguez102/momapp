@@ -8,7 +8,7 @@ import { createCn } from 'cn/config'
 export const cn = createCn({
   extend: {
     theme: {
-      text: ['caption', 'body-sm', 'body', 'title', 'title-lg', 'input', 'heading', 'stat', 'page', 'display', 'hero'],
+      text: ['caption', 'body-sm', 'body', 'title', 'title-lg', 'field', 'heading', 'stat', 'page', 'display', 'hero'],
       radius: ['card', 'card-sm', 'row', 'row-lg'],
       shadow: ['hero', 'raised', 'nav', 'popover'],
       spacing: ['gutter', 'gutter-tight', 'tap', 'input', 'row', 'nav'],

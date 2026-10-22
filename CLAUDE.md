@@ -85,7 +85,9 @@ idempotent. Pages `await afterAutoClose()` before computing queue/week/resume
 state, and listen for `SESSIONS_AUTO_CLOSED_EVENT` to refresh (Home) or
 stop logging (WorkoutSession). No pg_cron / scheduled DB jobs.
 
-**Workout session lifecycle** (`WorkoutSession.jsx` + write helpers):
+**Workout session lifecycle** (`src/features/workout/`: `useWorkoutSession`
+owns all of this, `workoutDraft.js` the draft, `WorkoutPage` + components the
+UI; pure parts in `src/domain/workoutState.js`):
 - A `workout_sessions` row is created lazily on the first saved set
   (`createSession`, deduped by a promise ref against double taps), never from
   just opening the page. Only one `in_progress` session at a time: same day
@@ -102,18 +104,27 @@ stop logging (WorkoutSession). No pg_cron / scheduled DB jobs.
 - Last-set difficulty (3+ / 1–2 / 0 reps left → `rpe` 7 / 8.5 / 10) lives on
   exactly one row per exercise: the highest logged `set_number`
   (`syncExerciseRpe` moves it when a higher set is logged or the holder is
-  removed). The tap is available once ≥ 1 set is logged and highlighted after
-  the final prescribed set. There is no per-set RPE input.
-- Session effort is a 1–10 tap (`EffortTap`) written to `session_rpe` at
-  Finish. The legacy `effort` column is never written (History still labels
+  removed). The hook mirrors every sync onto its in-memory rows
+  (`withRpeOnTopSet`) — `removeLiveSet` relies on `row.rpe` to re-home the
+  tap. Shown as "Easy / 3+ left", "Just right / 1–2 left", "Hard / 0 left"
+  once ≥ 1 set is logged, highlighted after the final prescribed set. There is
+  no per-set RPE input.
+- Session effort is a 1–10 tap (`EffortPicker`) written to `session_rpe` at
+  Finish (for now on the workout screen; the Workout complete step moves it
+  after Finish, saved with `updateSessionRpe`). The legacy `effort` column is never written (History still labels
   pilot values via `EFFORT_OPTIONS`).
-- Finish (`finishSession`) is disabled at 0 sets. With < 6 sets an inline card
-  asks "Only N sets logged — count this as a workout?" → `completed` or
+- Finish (`finishSession`, sticky bottom bar) is disabled at 0 sets. With < 6
+  sets an AlertDialog asks "Only N sets logged" → "Count it" `completed` or
   `partial`; `closed_by = 'user'`; duration = first → last set (never wall
   clock). The live timer is display only.
 - `localStorage` key `block1:session-in-progress-<dayId>` (namespaced by block
   so pilot drafts can't resume) holds only the draft: unsaved entries, swaps,
   the effort pick. Anything saved lives in Supabase and wins on resume.
+- UI: full screen (no nav), one exercise open at a time; it auto-advances to
+  the next unfinished one once all prescribed sets are logged and the last
+  set's feel is tapped. Removing a set and swapping over typed numbers ask
+  first. Loads use the throwing services with the 8 s timeout and a real
+  error state (offline no longer looks like a fresh block).
 
 **Progression suggestions** (`getExerciseSuggestion`) — suggestions only,
 she can always override. Read from `getProgressionLogs`: block ≥ 1 sets only

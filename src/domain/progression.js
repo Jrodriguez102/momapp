@@ -43,6 +43,7 @@ function roundWeight(w) {
 //                   block >= 1 weight for this name, else the base
 //                   exercise's startWeight (alternatives: blank)
 //   lastWeight    — last logged block >= 1 working weight for this name
+//   lastReps      — best reps at lastWeight in that session (display only)
 //   targetWeight  — today's suggested weight, or null for none
 //   targetReps    — rep number to aim for, or null
 //   action        — 'start' | 'calibrate' | 'deload' | 'increase' | 'hold' |
@@ -71,10 +72,13 @@ function getRawSuggestion({ exercise, activeName, logs, weekMeta, recentComplete
   const sessions = groupProgressionSessions(logs, activeName)
   const last = sessions[0]
   const lastWeight = last?.workingWeight ?? null
+  // Best reps at that working weight last time (for "Last time 35 lb × 10").
+  const lastReps = lastWeight == null ? null : Math.max(...last.sets.filter((s) => Number(s.weight) === lastWeight).map((s) => s.reps))
 
   const base = {
     prefillWeight: lastWeight ?? (isBase ? startWeight : null),
     lastWeight,
+    lastReps,
     goalWeight: isBase ? goalWeight : null,
     unit,
     repMin: range?.min ?? null,
