@@ -6,6 +6,11 @@ export function getGreeting(date = new Date()) {
   return 'Good evening'
 }
 
+// 1 -> "Block 01"
+export function formatBlockLabel(block) {
+  return `Block ${String(block).padStart(2, '0')}`
+}
+
 export function formatDuration(totalSeconds) {
   const h = Math.floor(totalSeconds / 3600)
   const m = Math.floor((totalSeconds % 3600) / 60)

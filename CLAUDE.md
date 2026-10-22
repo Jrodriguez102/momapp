@@ -55,16 +55,18 @@ completed block-1 session (`getNextQueueDay`), Day 1 if none. A `partial`
 session doesn't count, so the same day stays next; a missed calendar day never
 skips content. Home's "Choose a different day" lets her start any day; the
 queue then continues from whichever day she completed last. Counts are fetched
-fresh on every page that needs them (Dashboard, WorkoutSession).
+fresh on every page that needs them (Home, WorkoutSession).
 
 **Planned weekdays are display only.** `PLANNED_WEEKDAYS` (Mon, Tue, Thu, Fri)
-drives only the Home week strip (`getTrainingWeek`: completed / planned /
-missed / rest). A workout on any day counts. The strip, "Training days this
-week" (`completedCount/plannedCount`) and the streak count any completed
-session regardless of block. Streak (`getWeeklyStreak`) = consecutive Mon–Sun
+drives only the Home week card (`buildTrainingWeek` → `buildWeekRows` in
+`src/domain/weekPlan.js`: completed rows show the workout actually done, on
+any weekday; today/upcoming planned days are filled with the next queue days,
+never past the block's end; past planned days with nothing done are muted
+"missed" rows). A workout on any day counts. The card's "X of 4 done" (can
+exceed 4) and the streak count any completed session regardless of block. Streak (`getWeeklyStreak`) = consecutive Mon–Sun
 weeks with ≥ 3 completed sessions; an unfinished current week never breaks it.
 
-**Routing:** `HashRouter` with three tabs (Home/Dashboard, History, Progress)
+**Routing:** `HashRouter` with three tabs (Home, History, Progress)
 plus a session flow at `/session/:dayId`. `WorkoutSessionRoute` in `App.jsx` keys
 `WorkoutSession` on `dayId` to force a clean remount on day change, so the
 component reads its draft synchronously via lazy `useState` initializers (no
@@ -80,7 +82,7 @@ or ≥ 120 min since its first set: `completed_at` = last set's `logged_at`,
 null, `status` = completed if ≥ 6 sets else partial. A stale zero-set session
 is deleted. All writes are guarded on `status = 'in_progress'`, so it's
 idempotent. Pages `await afterAutoClose()` before computing queue/week/resume
-state, and listen for `SESSIONS_AUTO_CLOSED_EVENT` to refresh (Dashboard) or
+state, and listen for `SESSIONS_AUTO_CLOSED_EVENT` to refresh (Home) or
 stop logging (WorkoutSession). No pg_cron / scheduled DB jobs.
 
 **Workout session lifecycle** (`WorkoutSession.jsx` + write helpers):
@@ -140,11 +142,16 @@ and never `status`/`completed_at`/`closed_by` — except removing every set
 (`removeHistorySet`) marks the session `partial`. Older sessions (incl. all
 pilot ones) are read-only.
 
-**Home tab:** greeting + quote, block/week chip, Today's Workout card (next
-in queue; in-progress session takes priority; "Block 01 complete" after 24),
-"Choose a different day", a dismissible weekly weigh-in card when there's no
-`body_weight_logs` entry in 7 days (`needsWeighIn`; dismissal is per-day in
-localStorage; shares `BodyWeightForm` with the Progress tab), stats, week strip.
+**Home tab** (`src/features/home/`: `HomePage` loads, `HomeView` renders from
+props; fixtures in `__fixtures__/homeFixtures.js`): date + greeting, block/week
+chip, `QuoteCard`, the hero (next in queue with real exercise names and the
+day's fixed `estimatedMinutes` from `program.js`; an in-progress session takes
+priority → "Continue workout"; "Block 01 complete" after 24), "Choose a
+different day" in a bottom `Sheet`, stats (this month / streak / block n/24),
+and the week card. There is no weigh-in card: when there's no
+`body_weight_logs` entry in 7 days, the Progress nav item shows a coral dot
+(`useWeighInDue` in `AppShell`, re-checked on route change and on
+`BODY_WEIGHT_LOGGED_EVENT`).
 
 **Supabase schema** (`supabase/schema.sql`, reference + idempotent; the
 one-off Block 01 data migration is `supabase/block01-migration.sql`, already

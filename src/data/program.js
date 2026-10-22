@@ -135,6 +135,8 @@ export const RPE_EXPLAINER = {
 // ---- The program ------------------------------------------------------------
 // Days run as a queue in array order: Upper A -> Lower A -> Upper B -> Lower B.
 // Exercise order = priority (last items get dropped first if short on time).
+// estimatedMinutes is a fixed, display-only "about N min" for Home (sets x
+// ~2.5 min incl. rest, rounded to 5); it never changes what's saved.
 //
 // Each exercise: id (stable kebab-case of the name — the same movement on two
 // days shares an id), name, demoUrl, sets, repRange, rpe (display only),
@@ -166,6 +168,7 @@ export const PROGRAM_DAYS = [
     id: 'day-1',
     name: 'Upper A (Chest / Back)',
     shortLabel: 'Upper A',
+    estimatedMinutes: 50,
     exercises: [
       {
         id: 'db-bench-press',
@@ -259,6 +262,7 @@ export const PROGRAM_DAYS = [
     id: 'day-2',
     name: 'Lower A (Quad / Glute)',
     shortLabel: 'Lower A',
+    estimatedMinutes: 50,
     exercises: [
       {
         id: 'hack-squat-machine',
@@ -323,6 +327,7 @@ export const PROGRAM_DAYS = [
     id: 'day-3',
     name: 'Upper B (Back / Shoulder / Arm)',
     shortLabel: 'Upper B',
+    estimatedMinutes: 50,
     exercises: [
       {
         id: 'incline-machine-press',
@@ -416,6 +421,7 @@ export const PROGRAM_DAYS = [
     id: 'day-4',
     name: 'Lower B (Glute / Hamstring)',
     shortLabel: 'Lower B',
+    estimatedMinutes: 45,
     exercises: [
       {
         id: 'smith-machine-hip-thrust',

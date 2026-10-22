@@ -30,12 +30,20 @@ function SheetOverlay({ className, ...props }) {
   )
 }
 
-function SheetContent({ className, children, showCloseButton = true, ...props }) {
+// On open, focus moves to the sheet itself (not its first button), so
+// screen readers start at the title and no option looks pre-selected.
+function focusSheet(event) {
+  event.preventDefault()
+  event.currentTarget.focus()
+}
+
+function SheetContent({ className, children, showCloseButton = true, onOpenAutoFocus = focusSheet, ...props }) {
   return (
     <SheetPrimitive.Portal>
       <SheetOverlay />
       <SheetPrimitive.Content
         data-slot="sheet-content"
+        onOpenAutoFocus={onOpenAutoFocus}
         className={cn(
           'fixed inset-x-0 bottom-0 z-50 flex max-h-[88dvh] flex-col overflow-y-auto rounded-t-card bg-surface pb-safe text-foreground shadow-popover outline-none',
           'data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=closed]:duration-200 data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=open]:duration-300',

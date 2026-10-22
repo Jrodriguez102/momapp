@@ -28,7 +28,7 @@ export function BottomNav({ items, label = 'Main' }) {
                 {dot && (
                   <span
                     aria-hidden="true"
-                    className="absolute -top-0.5 -right-1 size-2.5 rounded-full bg-primary ring-2 ring-nav-foreground"
+                    className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-primary ring-2 ring-nav-foreground"
                   />
                 )}
               </span>

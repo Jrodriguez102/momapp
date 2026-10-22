@@ -36,6 +36,13 @@ describe('program content invariants (Block 01)', () => {
     }
   })
 
+  it('gives every day a short label and a display-only duration estimate', () => {
+    for (const day of PROGRAM_DAYS) {
+      expect(day.shortLabel, day.id).toBeTruthy()
+      expect(day.estimatedMinutes, day.id).toBeGreaterThan(0)
+    }
+  })
+
   it('is 24 sessions per block', () => {
     expect(SESSIONS_PER_BLOCK).toBe(24)
   })

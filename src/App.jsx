@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { HashRouter, Routes, Route, useParams } from 'react-router-dom'
-import Dashboard from './pages/Dashboard'
+import HomePage from '@/features/home/HomePage'
 import WorkoutSession from './pages/WorkoutSession'
 import History from './pages/History'
 import Progress from './pages/Progress'
@@ -36,7 +36,7 @@ export default function App() {
     <HashRouter>
       <AppShell>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<HomePage />} />
           <Route path="/session/:dayId" element={<WorkoutSessionRoute />} />
           <Route path="/history" element={<History />} />
           <Route path="/progress" element={<Progress />} />

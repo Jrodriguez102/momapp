@@ -24,9 +24,14 @@ export async function fetchWeighInDue(now = new Date()) {
   return isWeighInDue(data?.logged_at, now)
 }
 
+// Fired on window after a successful weigh-in, so the nav's "weigh-in due"
+// dot can clear right away.
+export const BODY_WEIGHT_LOGGED_EVENT = 'momapp:body-weight-logged'
+
 export async function logBodyWeight(weight, loggedAt = new Date()) {
   const { error } = await supabase
     .from('body_weight_logs')
     .insert({ weight, logged_at: loggedAt.toISOString() })
   if (error) throw error
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(BODY_WEIGHT_LOGGED_EVENT))
 }

@@ -1,13 +1,21 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { House } from 'lucide-react'
 import { AppShell } from './AppShell'
 import { BottomNav } from '@/ui/bottom-nav'
+import { BODY_WEIGHT_LOGGED_EVENT, fetchWeighInDue } from '@/services/bodyWeightApi'
+
+vi.mock('@/services/bodyWeightApi', () => ({
+  BODY_WEIGHT_LOGGED_EVENT: 'test:body-weight-logged',
+  fetchWeighInDue: vi.fn(() => Promise.resolve(false)),
+}))
 
 beforeEach(() => {
   window.scrollTo = vi.fn()
+  fetchWeighInDue.mockReset()
+  fetchWeighInDue.mockResolvedValue(false)
 })
 afterEach(cleanup)
 
@@ -66,6 +74,33 @@ describe('AppShell + BottomNav', () => {
     window.scrollTo.mockClear()
     fireEvent.click(screen.getByRole('link', { name: 'History' }))
     expect(window.scrollTo).toHaveBeenCalledWith(0, 0)
+  })
+})
+
+describe('weigh-in dot on Progress', () => {
+  it('shows when a weigh-in is due and clears right after one is logged', async () => {
+    fetchWeighInDue.mockResolvedValue(true)
+    renderAt('/')
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Progress, weigh-in due' })).toBeTruthy())
+    fetchWeighInDue.mockResolvedValue(false)
+    act(() => {
+      window.dispatchEvent(new CustomEvent(BODY_WEIGHT_LOGGED_EVENT))
+    })
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Progress' })).toBeTruthy())
+  })
+
+  it('stays hidden when the check fails', async () => {
+    fetchWeighInDue.mockRejectedValue(new Error('offline'))
+    renderAt('/')
+    await waitFor(() => expect(fetchWeighInDue).toHaveBeenCalled())
+    expect(screen.getByRole('link', { name: 'Progress' })).toBeTruthy()
+  })
+
+  it('re-checks when the route changes', async () => {
+    renderAt('/')
+    await waitFor(() => expect(fetchWeighInDue).toHaveBeenCalledTimes(1))
+    fireEvent.click(screen.getByRole('link', { name: 'History' }))
+    await waitFor(() => expect(fetchWeighInDue).toHaveBeenCalledTimes(2))
   })
 })
 

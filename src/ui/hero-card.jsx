@@ -21,11 +21,16 @@ export function HeroEyebrow({ className, ...props }) {
   return <p className={cn('text-caption font-bold tracking-wider text-primary-foreground uppercase', className)} {...props} />
 }
 
-// Semi-transparent white chip inside a HeroCard (exercise names, "+N more").
+// Translucent chip inside a HeroCard (exercise names, "+N more"). A dark
+// tint with a light edge, not a white tint: white text on any white tint
+// over the gradient drops below 4.5:1 (3.4-4.3), the dark tint keeps 5.3+.
 export function HeroChip({ className, ...props }) {
   return (
     <span
-      className={cn('inline-flex min-h-8 items-center rounded-full bg-primary-foreground/18 px-3 text-caption font-semibold text-primary-foreground', className)}
+      className={cn(
+        'inline-flex min-h-8 items-center rounded-full border border-primary-foreground/30 bg-nav/15 px-3 text-caption font-semibold text-primary-foreground',
+        className,
+      )}
       {...props}
     />
   )
