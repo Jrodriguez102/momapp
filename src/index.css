@@ -30,9 +30,10 @@
 }
 
 body {
-  background-color: var(--color-base-950);
-  color: var(--color-base-100);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
   font-family: var(--font-body);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .glass {

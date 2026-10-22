@@ -140,3 +140,13 @@
 @utility pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* The floating bottom nav sits this far above the bottom edge... */
+@utility bottom-nav-offset {
+  bottom: calc(var(--spacing-gutter-tight) + env(safe-area-inset-bottom));
+}
+
+/* ...so scrolling pages pad by nav height + offset + breathing room. */
+@utility pb-nav-clearance {
+  padding-bottom: calc(var(--spacing-nav) + 2 * var(--spacing-gutter-tight) + env(safe-area-inset-bottom));
+}
