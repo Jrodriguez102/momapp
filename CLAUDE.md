@@ -191,7 +191,15 @@ minimal). RLS is open to `anon` (single user, no auth). Any schema change goes
 through hand-run SQL, never from the app; when adding fields to a logged set
 or session, update the schema file and the write helpers in `helpers.js`.
 
-**Exercise progress math** (`helpers.js`, Progress tab): logged sets are
+**Progress tab** (`src/features/progress/`; pure parts in `progressMath.js`):
+body weight card (latest weight, a neutral delta badge over the selected
+1M/3M/6M/All range — never colored good/bad — area chart, "Log weight" sheet
+that does the same `body_weight_logs` insert as before) and a Lifts card
+(Select of names logged in Block 01+ — pilot-only names are hidden, History
+still shows them — best top set, latest est. 1RM, top-set chart, session
+chips). Every chart has a one-line text summary as its caption.
+
+**Exercise progress math** (`domain/metrics.js`, Progress tab): logged sets are
 grouped per session by `exercise_name` (`groupLogsBySession` — ids changed
 between the pilot and Block 01, names didn't), and each session's "top set"
 (heaviest weight, ties broken by reps — `getTopSet`) drives the chart and the

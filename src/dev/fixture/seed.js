@@ -11,8 +11,13 @@
 //    4d Lower B  — PARTIAL, 3 sets
 //    3d Lower B  — completed, outside the 48h edit window
 //   20h Upper A  — completed, inside the edit window (28h left)
-//   40d pilot (block 0, day-6) with a legacy effort label
+//   40d pilot (block 0, day-6) with a legacy effort label; its only lift,
+//       KB Sumo Deadlift, is pilot-only (Progress hides it)
 //   today: Lower A in progress (Hack Squat 4/4 done, Step-Up 1/3)
+// Progress: DB Bench Press / Lat Pulldown go up (3 sessions); Seated DB
+// Shoulder Press goes down at the last session; Goblet Squat has exactly one
+// session; 13 weekly-ish weigh-ins over 3 months, the last 9 days ago (so a
+// weigh-in is due), trending down overall but up over the last month.
 // Scenarios: 'default' | 'empty' (no data at all) | 'blockDone' (24 done).
 import { PROGRAM_DAYS } from '@/data/program'
 
@@ -31,7 +36,8 @@ function repsFor(exercise, offset = 0) {
 // Logged sets for a session: every exercise's prescribed sets (or `limit`
 // sets in total), 3 minutes apart, ending at `endAt`; the last set of each
 // exercise carries the "1-2 left" difficulty (rpe 8.5).
-function sessionLogs({ sessionId, dayId, endAt, weightBump = 0, limit = Infinity, swaps = {} }) {
+// adjust: per-exercise extra weight, on top of weightBump.
+function sessionLogs({ sessionId, dayId, endAt, weightBump = 0, limit = Infinity, swaps = {}, adjust = {} }) {
   const plan = dayById(dayId).exercises.flatMap((ex) =>
     Array.from({ length: ex.sets }, (_, i) => ({ ex, setNumber: i + 1, last: i === ex.sets - 1 })),
   ).slice(0, limit)
@@ -42,7 +48,7 @@ function sessionLogs({ sessionId, dayId, endAt, weightBump = 0, limit = Infinity
     exercise_id: ex.id,
     exercise_name: swaps[ex.id] ?? ex.name,
     set_number: setNumber,
-    weight: ex.weight.startWeight + weightBump,
+    weight: ex.weight.startWeight + weightBump + (adjust[ex.id] ?? 0),
     weight_unit: ex.weight.unit,
     reps: repsFor(ex, setNumber - 1 > 1 ? 1 : 0),
     rpe: last || (limit !== Infinity && i === plan.length - 1) ? 8.5 : null,
@@ -71,6 +77,12 @@ function finishedSession({ id, dayId, block = 1, week, status = 'completed', clo
   }
 }
 
+// [days ago, lb], oldest first.
+const BODY_WEIGHTS = [
+  [91, 156.2], [84, 155.8], [77, 155.9], [70, 155.1], [63, 154.6], [56, 154.8], [49, 154.0],
+  [42, 153.5], [35, 153.9], [28, 152.4], [21, 152.6], [16, 152.9], [9, 153.2],
+]
+
 export function buildFixtureDb({ now = Date.now(), scenario = 'default' } = {}) {
   if (scenario === 'empty') return { workout_sessions: [], exercise_logs: [], body_weight_logs: [] }
 
@@ -84,13 +96,15 @@ export function buildFixtureDb({ now = Date.now(), scenario = 'default' } = {}) 
     { id: 'fx-auto', dayId: 'day-3', at: 6 * DAY, week: 2, closedBy: 'auto', limit: 6 },
     { id: 'fx-partial', dayId: 'day-4', at: 4 * DAY, week: 3, status: 'partial', limit: 3 },
     { id: 'fx-old', dayId: 'day-4', at: 3 * DAY, week: 3, sessionRpe: 8, bump: 5 },
-    { id: 'fx-recent', dayId: 'day-1', at: 20 * HOUR, week: 3, sessionRpe: 7, bump: 5 },
+    { id: 'fx-recent', dayId: 'day-1', at: 20 * HOUR, week: 3, sessionRpe: 7, bump: 5, adjust: { 'seated-db-shoulder-press': -7.5 } },
   ]
 
   const sessions = []
   const logs = []
   for (const p of plan) {
-    const sessionLogsList = sessionLogs({ sessionId: p.id, dayId: p.dayId, endAt: now - p.at, weightBump: p.bump ?? 0, limit: p.limit, swaps: p.swaps })
+    const sessionLogsList = sessionLogs({
+      sessionId: p.id, dayId: p.dayId, endAt: now - p.at, weightBump: p.bump ?? 0, limit: p.limit, swaps: p.swaps, adjust: p.adjust,
+    })
     logs.push(...sessionLogsList)
     sessions.push(
       finishedSession({ id: p.id, dayId: p.dayId, week: p.week, status: p.status, closedBy: p.closedBy, sessionRpe: p.sessionRpe ?? null, logs: sessionLogsList }),
@@ -136,10 +150,12 @@ export function buildFixtureDb({ now = Date.now(), scenario = 'default' } = {}) 
   return {
     workout_sessions: sessions,
     exercise_logs: logs,
-    body_weight_logs: [
-      { id: 'fx-bw-1', weight: 154.2, weight_unit: 'lb', logged_at: new Date(now - 30 * DAY).toISOString() },
-      { id: 'fx-bw-2', weight: 153.6, weight_unit: 'lb', logged_at: new Date(now - 16 * DAY).toISOString() },
-      { id: 'fx-bw-3', weight: 152.4, weight_unit: 'lb', logged_at: new Date(now - 9 * DAY).toISOString() },
-    ],
+    body_weight_logs: BODY_WEIGHTS.map(([daysAgo, weight], i) => ({
+      id: `fx-bw-${i + 1}`,
+      weight,
+      weight_unit: 'lb',
+      logged_at: new Date(now - daysAgo * DAY + 7 * HOUR).toISOString(),
+      created_at: new Date(now - daysAgo * DAY + 7 * HOUR).toISOString(),
+    })),
   }
 }

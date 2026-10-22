@@ -109,10 +109,10 @@ const TIMEFRAME_MONTHS = { '1m': 1, '3m': 3, '6m': 6 }
 
 // timeframe: '1m' | '3m' | '6m' | 'all'. Filters by `logged_at` unless a
 // different field name is passed.
-export function filterByTimeframe(entries, timeframe, dateKey = 'logged_at') {
+export function filterByTimeframe(entries, timeframe, dateKey = 'logged_at', now = new Date()) {
   const months = TIMEFRAME_MONTHS[timeframe]
   if (!months) return entries
-  const cutoff = new Date()
+  const cutoff = new Date(now)
   cutoff.setMonth(cutoff.getMonth() - months)
   return entries.filter((entry) => new Date(entry[dateKey]) >= cutoff)
 }

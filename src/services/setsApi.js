@@ -39,11 +39,12 @@ export async function fetchExerciseLogsForSessions(sessionIds) {
   return data || []
 }
 
-// Every strength set ever logged, oldest first (Progress tab).
+// Every strength set ever logged, oldest first, with its session's block
+// (Progress tab — block 0 = pilot).
 export async function fetchAllStrengthLogs() {
   const { data, error } = await supabase
     .from('exercise_logs')
-    .select('*')
+    .select('*, workout_sessions!inner(block)')
     .eq('is_cardio', false)
     .order('logged_at', { ascending: true })
   if (error) throw error

@@ -11,8 +11,8 @@ export function StatTile({ value, unit, label, tone = 'default', className }) {
         className,
       )}
     >
-      <p className="flex items-baseline gap-1">
-        <span className={cn('font-display text-stat font-black tabular-nums', tone === 'accent' ? 'text-accent-deep' : 'text-foreground')}>
+      <p className="flex flex-wrap items-baseline gap-x-1">
+        <span className={cn('font-display text-stat font-black whitespace-nowrap tabular-nums', tone === 'accent' ? 'text-accent-deep' : 'text-foreground')}>
           {value}
         </span>
         {unit && <span className="text-caption font-semibold text-muted-foreground">{unit}</span>}

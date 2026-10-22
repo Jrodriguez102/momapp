@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { findExerciseById } from '@/domain/metrics'
 import { isWithinEditWindow } from '@/domain/sessionRules'
+import { isWeighInDue } from '@/domain/calendar'
 import { buildFixtureDb } from './seed'
 
 const now = new Date(2026, 9, 21, 18, 0).getTime()
@@ -48,6 +49,23 @@ describe('fixture seed (default)', () => {
         expect(rows.filter((r) => r.rpe != null && r.set_number !== top)).toEqual([])
       }
     }
+  })
+
+  it('has the Progress cases: 3 months of weigh-ins, varied lifts, a pilot-only and a one-session lift', () => {
+    const weighIns = db.body_weight_logs.map((b) => new Date(b.logged_at).getTime())
+    expect(db.body_weight_logs.length).toBeGreaterThanOrEqual(12)
+    expect((Math.max(...weighIns) - Math.min(...weighIns)) / 86_400_000).toBeGreaterThan(80)
+    expect(isWeighInDue(db.body_weight_logs.at(-1).logged_at, at)).toBe(true)
+
+    const blockOf = (sessionId) => db.workout_sessions.find((s) => s.id === sessionId).block
+    const sessionsFor = (name) => new Set(db.exercise_logs.filter((l) => l.exercise_name === name).map((l) => l.session_id))
+    const topWeight = (name, sessionId) =>
+      Math.max(...db.exercise_logs.filter((l) => l.exercise_name === name && l.session_id === sessionId).map((l) => l.weight))
+
+    expect([...sessionsFor('KB Sumo Deadlift')].every((id) => blockOf(id) === 0)).toBe(true)
+    expect(sessionsFor('Goblet Squat').size).toBe(1)
+    expect(topWeight('DB Bench Press', 'fx-recent')).toBeGreaterThan(topWeight('DB Bench Press', 'fx-22d'))
+    expect(topWeight('Seated DB Shoulder Press', 'fx-recent')).toBeLessThan(topWeight('Seated DB Shoulder Press', 'fx-12d'))
   })
 
   it('is deterministic for a given now', () => {

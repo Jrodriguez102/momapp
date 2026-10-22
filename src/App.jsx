@@ -3,7 +3,7 @@ import { HashRouter, Routes, Route, useParams } from 'react-router-dom'
 import HomePage from '@/features/home/HomePage'
 import WorkoutPage from '@/features/workout/WorkoutPage'
 import HistoryPage from '@/features/history/HistoryPage'
-import Progress from './pages/Progress'
+import ProgressPage from '@/features/progress/ProgressPage'
 import { runAutoClose } from './data/helpers'
 import { AppShell } from '@/app/AppShell'
 import { Toaster } from '@/ui/sonner'
@@ -39,7 +39,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/session/:dayId" element={<WorkoutSessionRoute />} />
           <Route path="/history" element={<HistoryPage />} />
-          <Route path="/progress" element={<Progress />} />
+          <Route path="/progress" element={<ProgressPage />} />
         </Routes>
       </AppShell>
       <Toaster />

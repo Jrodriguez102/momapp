@@ -44,12 +44,12 @@ describe('createSession', () => {
 })
 
 describe('fetchAllStrengthLogs', () => {
-  it('reads non-cardio sets oldest first', async () => {
+  it('reads non-cardio sets oldest first, with their session block', async () => {
     fake.respond(() => ({ data: [{ id: 'a' }] }))
     expect(await setsApi.fetchAllStrengthLogs()).toEqual([{ id: 'a' }])
     const [q] = fake.queries
     expect(q.ops.map((op) => [op.name, ...op.args])).toEqual([
-      ['select', '*'],
+      ['select', '*, workout_sessions!inner(block)'],
       ['eq', 'is_cardio', false],
       ['order', 'logged_at', { ascending: true }],
     ])
