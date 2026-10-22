@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:fixture": "vite --mode fixture --port 5199 --strictPort --host",
     "build": "vite build",
     "lint": "oxlint",
     "test": "vitest run",

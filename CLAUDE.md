@@ -20,8 +20,16 @@ Run from the `momapp/` directory (this is the actual repo root — the parent
 - `npm run lint` — oxlint (rules: `react/rules-of-hooks`, `react/only-export-components`)
 - `npm run preview` — preview a production build locally
 - `npm run deploy` — builds and pushes `dist/` to the `gh-pages` branch only (does **not** commit source changes to `main` — commit/push those separately)
+- `npm run dev:fixture` — the app on fake in-memory data at
+  `http://<host>:5199/momapp/` (LAN-exposed for phone testing). Only for this
+  dev server, `vite.config.js` aliases the Supabase client to
+  `src/dev/fixture/fixtureClient.js`; it never contacts Supabase, resets on
+  reload (incl. drafts on that origin), and is never in a build. Data:
+  `src/dev/fixture/seed.js` (also used by tests). URL switches before the `#`:
+  `?empty`, `?blockDone`, `?failEffort`, `?nobanner`. Use it to test anything
+  that writes; never test writes against live data.
+- `npm test` — Vitest (unit + jsdom component tests)
 
-There is no test suite configured in this repo.
 
 ## Architecture
 
