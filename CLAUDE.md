@@ -152,9 +152,12 @@ The weight input prefills with the target on increase/decrease days (with a
 "Last time" note), otherwise the last logged block ≥ 1 weight, else
 `startWeight`. Reps always start blank.
 
-**History tab:** a flat chronological list of finished (`completed` +
-`partial`) sessions, most recent first, with an All / This Week / This Month
-filter. `getFinishedSessions()` + one bulk `getExerciseLogsForSessions()` query
+**History tab** (`src/features/history/`): a flat chronological list of
+finished (`completed` + `partial`) sessions, most recent first, with an All /
+This week / This month filter. Cards expand in place (set chips, first 3
+exercises + "+N more", effort); inside the edit window "Edit sets" switches to
+the same `SetRow` / `LastSetFeelChips` / `EffortPicker` / `RemoveSetDialog`
+as the workout screen (`src/features/common/`). `getFinishedSessions()` + one bulk `getExerciseLogsForSessions()` query
 give each row's summary up front. Partial sessions carry a "Partial" tag;
 auto-closed ones say so. Rows expand to the full workout
 (`groupSessionLogsByExercise`, with `originalName` flagging swaps). For 48 h

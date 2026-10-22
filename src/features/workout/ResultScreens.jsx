@@ -8,7 +8,7 @@ import { Button } from '@/ui/button'
 import { Card } from '@/ui/card'
 import { ProgressBar } from '@/ui/progress-bar'
 import { StatTile } from '@/ui/stat-tile'
-import { EffortPicker } from './EffortPicker'
+import { EffortPicker } from '@/features/common/EffortPicker'
 import { ResultLayout } from './ResultLayout'
 import { useSessionEffort } from './useSessionEffort'
 

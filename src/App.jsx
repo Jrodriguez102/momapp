@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { HashRouter, Routes, Route, useParams } from 'react-router-dom'
 import HomePage from '@/features/home/HomePage'
 import WorkoutPage from '@/features/workout/WorkoutPage'
-import History from './pages/History'
+import HistoryPage from '@/features/history/HistoryPage'
 import Progress from './pages/Progress'
 import { runAutoClose } from './data/helpers'
 import { AppShell } from '@/app/AppShell'
@@ -38,7 +38,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/session/:dayId" element={<WorkoutSessionRoute />} />
-          <Route path="/history" element={<History />} />
+          <Route path="/history" element={<HistoryPage />} />
           <Route path="/progress" element={<Progress />} />
         </Routes>
       </AppShell>

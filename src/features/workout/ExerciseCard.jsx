@@ -1,27 +1,17 @@
 import { useState } from 'react'
 import { ArrowRight, ExternalLink, Repeat } from 'lucide-react'
-import { LAST_SET_DIFFICULTY_OPTIONS, RPE_EXPLAINER } from '@/data/program'
+import { RPE_EXPLAINER } from '@/data/program'
 import { isValidReps, isValidWeight } from '@/domain/metrics'
 import { cn } from '@/lib/utils'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/ui/alert-dialog'
 import { Button } from '@/ui/button'
 import { Card } from '@/ui/card'
-import { ChoiceChips } from '@/ui/choice-chips'
 import { InfoPopover } from '@/ui/info-popover'
 import { SetRow, SetRowHeader } from '@/ui/set-row'
+import { LastSetFeelChips } from '@/features/common/LastSetFeelChips'
+import { LAST_SET_FEEL_QUESTION } from '@/features/common/lastSetFeel'
+import { RemoveSetDialog } from '@/features/common/RemoveSetDialog'
 import { formatRepRange } from './exerciseProgress'
 import { goalLine, suggestionCallout } from './suggestionCopy'
-
-const DIFFICULTY_CHIPS = LAST_SET_DIFFICULTY_OPTIONS.map((opt) => ({ value: opt.value, label: opt.feel, detail: opt.label }))
 
 // The open exercise: header, suggestion, set rows, last-set difficulty.
 // Logged rows open an inline editor; removing asks first.
@@ -176,16 +166,8 @@ export function ExerciseCard({
 
       {loggedCount > 0 && (
         <div className={cn('space-y-2 rounded-row p-3', promptDifficulty ? 'border-[1.5px] border-primary bg-accent' : 'bg-surface-muted')}>
-          <p id={`difficulty-${exercise.id}`} className="text-body-sm font-semibold text-foreground">
-            How did the last set feel?
-          </p>
-          <ChoiceChips
-            label="How did the last set feel?"
-            options={DIFFICULTY_CHIPS}
-            value={difficulty}
-            onChange={onDifficulty}
-            disabled={locked}
-          />
+          <p className="text-body-sm font-semibold text-foreground">{LAST_SET_FEEL_QUESTION}</p>
+          <LastSetFeelChips value={difficulty} onChange={onDifficulty} disabled={locked} />
         </div>
       )}
 
@@ -202,23 +184,13 @@ export function ExerciseCard({
         )}
       </div>
 
-      <AlertDialog open={!!confirmRemove} onOpenChange={(open) => !open && setConfirmRemove(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove set {confirmRemove?.set_number}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirmRemove?.weight ?? '—'} {unit} × {confirmRemove?.reps} will be deleted.
-              {isOnlySetInWorkout && ' It’s the only set logged, so this workout will be cleared too.'}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction variant="destructive" onClick={removeConfirmed}>
-              Remove set
-            </AlertDialogAction>
-            <AlertDialogCancel>Keep it</AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <RemoveSetDialog
+        row={confirmRemove}
+        unit={unit}
+        note={isOnlySetInWorkout ? 'It’s the only set logged, so this workout will be cleared too.' : null}
+        onConfirm={removeConfirmed}
+        onCancel={() => setConfirmRemove(null)}
+      />
     </Card>
   )
 }
