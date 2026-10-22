@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Check, ChevronDown } from 'lucide-react'
 import {
-  getFinishedSessions,
-  getExerciseLogsForSessions,
   getSessionExerciseLogs,
   groupSessionLogsByExercise,
   getSetsVolume,
@@ -19,6 +17,12 @@ import {
   HISTORY_EDIT_WINDOW_MS,
 } from '../data/helpers'
 import { EFFORT_OPTIONS, LAST_SET_DIFFICULTY_OPTIONS } from '../data/program'
+import { fetchFinishedSessions } from '@/services/sessionsApi'
+import { fetchExerciseLogsForSessions } from '@/services/setsApi'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { notifyError } from '@/ui/toast'
+import { LoadingState } from '@/ui/skeleton'
+import { ErrorState } from '@/ui/error-state'
 import EffortTap from '../components/EffortTap'
 import LastSetDifficultyTap from '../components/LastSetDifficultyTap'
 
@@ -151,7 +155,7 @@ function SessionRow({ session, logs, onChanged }) {
       return true
     } catch (err) {
       console.error('Failed to save History edit:', err)
-      alert('Could not save that change — check your connection and try again.')
+      notifyError('Could not save that change — check your connection and try again.')
       return false
     } finally {
       setBusy(false)
@@ -277,38 +281,40 @@ function SessionRow({ session, logs, onChanged }) {
   )
 }
 
-export default function History() {
-  const [sessions, setSessions] = useState(null)
-  const [logsBySession, setLogsBySession] = useState(new Map())
-  const [filter, setFilter] = useState('all')
+async function loadHistory() {
+  const sessions = await fetchFinishedSessions()
+  const logs = await fetchExerciseLogsForSessions(sessions.map((s) => s.id))
+  const logsBySession = new Map()
+  for (const log of logs) {
+    if (!logsBySession.has(log.session_id)) logsBySession.set(log.session_id, [])
+    logsBySession.get(log.session_id).push(log)
+  }
+  return { sessions, logsBySession }
+}
 
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-      const finished = await getFinishedSessions()
-      const logs = await getExerciseLogsForSessions(finished.map((s) => s.id))
-      if (cancelled) return
-      const grouped = new Map()
-      for (const log of logs) {
-        if (!grouped.has(log.session_id)) grouped.set(log.session_id, [])
-        grouped.get(log.session_id).push(log)
-      }
-      setSessions(finished)
-      setLogsBySession(grouped)
-    }
-    load()
-    return () => { cancelled = true }
-  }, [])
+export default function History() {
+  // After the auto-close check, so a just-closed session is listed.
+  const { status, data, reload, setData } = useAsyncData(loadHistory, { waitForAutoClose: true })
+  const [filter, setFilter] = useState('all')
 
   // After an edit: refetch that session's sets, and apply any session-field
   // change (session_rpe, or status -> partial when every set was removed).
   async function refreshSession(sessionId, patch) {
     const fresh = await getSessionExerciseLogs(sessionId)
-    setLogsBySession((prev) => new Map(prev).set(sessionId, fresh))
-    if (patch) setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, ...patch } : s)))
+    setData((prev) => ({
+      sessions: patch ? prev.sessions.map((s) => (s.id === sessionId ? { ...s, ...patch } : s)) : prev.sessions,
+      logsBySession: new Map(prev.logsBySession).set(sessionId, fresh),
+    }))
   }
 
-  if (!sessions) return null
+  if (status === 'loading' || !data) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 pt-8 pb-4">
+        {status === 'loading' ? <LoadingState label="Loading your workouts…" /> : <ErrorState onRetry={reload} />}
+      </div>
+    )
+  }
+  const { sessions, logsBySession } = data
 
   const now = new Date()
   const cutoff = filter === 'week' ? startOfWeek(now) : filter === 'month' ? startOfMonth(now) : null

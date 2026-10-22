@@ -27,6 +27,7 @@ import {
   SESSIONS_AUTO_CLOSED_EVENT,
 } from '../data/helpers'
 import { applyDeloadToSets, CURRENT_BLOCK, SESSIONS_PER_BLOCK } from '../data/program'
+import { notifyError } from '@/ui/toast'
 import ExerciseCard from '../components/ExerciseCard'
 import EffortTap from '../components/EffortTap'
 import StatTile from '../components/StatTile'
@@ -300,7 +301,7 @@ export default function WorkoutSession() {
       return true
     } catch (err) {
       console.error('Failed to save set:', err)
-      alert('Could not save that set — check your connection and try again.')
+      notifyError('Could not save that set — check your connection and try again.')
       return false
     } finally {
       setSaving(ex.id, setNumber, false)
@@ -331,7 +332,7 @@ export default function WorkoutSession() {
       return true
     } catch (err) {
       console.error('Failed to remove set:', err)
-      alert('Could not remove that set — check your connection and try again.')
+      notifyError('Could not remove that set — check your connection and try again.')
       return false
     }
   }
@@ -345,7 +346,7 @@ export default function WorkoutSession() {
     } catch (err) {
       console.error('Failed to save difficulty:', err)
       setDifficulties((prev) => ({ ...prev, [ex.id]: previous }))
-      alert('Could not save that — check your connection and try again.')
+      notifyError('Could not save that — check your connection and try again.')
     }
   }
 
@@ -373,7 +374,7 @@ export default function WorkoutSession() {
       setEntries((prev) => ({ ...prev, [ex.id]: [] }))
     } catch (err) {
       console.error('Failed to swap exercise:', err)
-      alert('Could not switch exercises — check your connection and try again.')
+      notifyError('Could not switch exercises — check your connection and try again.')
     }
   }
 
@@ -401,7 +402,7 @@ export default function WorkoutSession() {
       })
     } catch (err) {
       console.error('Failed to finish session:', err)
-      alert('Could not finish the workout — check your connection and try again.')
+      notifyError('Could not finish the workout — check your connection and try again.')
     } finally {
       setFinishing(false)
       setConfirmingFinish(false)

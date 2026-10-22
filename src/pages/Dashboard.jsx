@@ -1,19 +1,20 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Flame } from 'lucide-react'
 import { USER_NAME, CURRENT_BLOCK, SESSIONS_PER_BLOCK } from '../data/program'
-import {
-  getBlockState,
-  getGreeting,
-  getTrainingWeek,
-  getWorkoutsThisMonth,
-  getWeeklyStreak,
-  getAnyInProgressSession,
-  needsWeighIn,
-  afterAutoClose,
-  SESSIONS_AUTO_CLOSED_EVENT,
-} from '../data/helpers'
+import { getGreeting } from '../data/helpers'
 import { getDailyQuote } from '../data/quotes'
+import {
+  fetchBlockState,
+  fetchTrainingWeek,
+  fetchWorkoutsThisMonth,
+  fetchWeeklyStreak,
+  fetchAnyInProgressSession,
+} from '@/services/sessionsApi'
+import { fetchWeighInDue } from '@/services/bodyWeightApi'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { LoadingState } from '@/ui/skeleton'
+import { ErrorState } from '@/ui/error-state'
 import TodayWorkoutCard from '../components/TodayWorkoutCard'
 import StatTile from '../components/StatTile'
 import WeekStrip from '../components/WeekStrip'
@@ -31,46 +32,36 @@ function isWeighInDismissedToday() {
   }
 }
 
+async function loadHome() {
+  const [blockState, trainingWeek, monthCount, streak, inProgressSession, weighInDue] = await Promise.all([
+    fetchBlockState(),
+    fetchTrainingWeek(),
+    fetchWorkoutsThisMonth(),
+    fetchWeeklyStreak(),
+    fetchAnyInProgressSession(),
+    // A failed weigh-in check shouldn't block Home (or nag).
+    fetchWeighInDue().catch(() => false),
+  ])
+  return { blockState, trainingWeek, monthCount, streak, inProgressSession, weighInDue }
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
-  const [data, setData] = useState(null)
-  const [showWeighIn, setShowWeighIn] = useState(false)
-
   // Always after the auto-close check, so a forgotten session is closed and
-  // counted before the queue / block / week are computed.
-  const load = useCallback(async () => {
-    await afterAutoClose()
-    const [blockState, trainingWeek, monthCount, streak, inProgressSession, weighInDue] = await Promise.all([
-      getBlockState(),
-      getTrainingWeek(),
-      getWorkoutsThisMonth(),
-      getWeeklyStreak(),
-      getAnyInProgressSession(),
-      needsWeighIn(),
-    ])
-    return { blockState, trainingWeek, monthCount, streak, inProgressSession, weighInDue }
-  }, [])
+  // counted before the queue / block / week are computed; a foreground
+  // auto-close changes the queue/stats, so reload when it happens.
+  const { status, data, reload } = useAsyncData(loadHome, { waitForAutoClose: true, reloadOnAutoClose: true })
+  const [weighInHidden, setWeighInHidden] = useState(isWeighInDismissedToday)
 
-  useEffect(() => {
-    let cancelled = false
-    function refresh() {
-      load().then((next) => {
-        if (cancelled) return
-        setData(next)
-        setShowWeighIn(next.weighInDue && !isWeighInDismissedToday())
-      })
-    }
-    refresh()
-    // A foreground auto-close changes the queue/stats — reload when it happens.
-    window.addEventListener(SESSIONS_AUTO_CLOSED_EVENT, refresh)
-    return () => {
-      cancelled = true
-      window.removeEventListener(SESSIONS_AUTO_CLOSED_EVENT, refresh)
-    }
-  }, [load])
-
-  if (!data) return null
+  if (status === 'loading' || !data) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 pt-8 pb-4">
+        {status === 'loading' ? <LoadingState label="Loading your week…" /> : <ErrorState onRetry={reload} />}
+      </div>
+    )
+  }
   const { blockState, trainingWeek, monthCount, streak, inProgressSession } = data
+  const showWeighIn = data.weighInDue && !weighInHidden
   const today = new Date()
   const trainedToday = trainingWeek.days.some((d) => d.isToday && d.status === 'completed')
 
@@ -80,7 +71,7 @@ export default function Dashboard() {
     } catch {
       // storage unavailable — just hide it for this visit
     }
-    setShowWeighIn(false)
+    setWeighInHidden(true)
   }
 
   return (
@@ -114,7 +105,7 @@ export default function Dashboard() {
         onStart={(dayId) => navigate(`/session/${dayId}`)}
       />
 
-      {showWeighIn && <WeighInCard onSaved={() => setShowWeighIn(false)} onDismiss={dismissWeighIn} />}
+      {showWeighIn && <WeighInCard onSaved={() => setWeighInHidden(true)} onDismiss={dismissWeighIn} />}
 
       <div className="grid grid-cols-3 gap-2">
         <StatTile value={monthCount} label="Workouts this month" dotColor="var(--color-base-400)" />

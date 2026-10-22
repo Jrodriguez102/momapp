@@ -1,20 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getAllStrengthLogs, getBodyWeightLogs } from '../data/helpers'
+import { getBodyWeightLogs } from '../data/helpers'
+import { fetchAllStrengthLogs } from '@/services/setsApi'
+import { fetchBodyWeightLogs } from '@/services/bodyWeightApi'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { LoadingState } from '@/ui/skeleton'
+import { ErrorState } from '@/ui/error-state'
 import BodyWeightPanel from '../components/BodyWeightPanel'
 import ExerciseProgressPanel from '../components/ExerciseProgressPanel'
 
-export default function Progress() {
-  const [exerciseLogs, setExerciseLogs] = useState([])
-  const [bodyWeightLogs, setBodyWeightLogs] = useState([])
-  const [selectedExerciseId, setSelectedExerciseId] = useState(null)
+const NO_LOGS = []
 
-  useEffect(() => {
-    async function load() {
-      setExerciseLogs(await getAllStrengthLogs())
-      setBodyWeightLogs(await getBodyWeightLogs())
-    }
-    load()
-  }, [])
+async function loadProgress() {
+  const [exerciseLogs, bodyWeightLogs] = await Promise.all([fetchAllStrengthLogs(), fetchBodyWeightLogs()])
+  return { exerciseLogs, bodyWeightLogs }
+}
+
+export default function Progress() {
+  // After the auto-close check, so a just-closed session's sets are counted.
+  const { status, data, reload, setData } = useAsyncData(loadProgress, { waitForAutoClose: true })
+  const exerciseLogs = data?.exerciseLogs ?? NO_LOGS
+  const [selectedExerciseId, setSelectedExerciseId] = useState(null)
 
   // Any exercise that's actually been logged — never a fixed "key lifts"
   // list, so this stays accurate as program.js changes.
@@ -32,8 +37,18 @@ export default function Progress() {
   }, [loggedExercises, selectedExerciseId])
 
   async function refreshBodyWeight() {
-    setBodyWeightLogs(await getBodyWeightLogs())
+    const bodyWeightLogs = await getBodyWeightLogs()
+    setData((prev) => ({ ...prev, bodyWeightLogs }))
   }
+
+  if (status === 'loading' || !data) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 pt-8 pb-4">
+        {status === 'loading' ? <LoadingState label="Loading your progress…" /> : <ErrorState onRetry={reload} />}
+      </div>
+    )
+  }
+  const { bodyWeightLogs } = data
 
   return (
     <div className="max-w-2xl mx-auto px-4 pt-8 pb-4 space-y-6">

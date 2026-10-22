@@ -6,6 +6,7 @@ import WorkoutSession from './pages/WorkoutSession'
 import History from './pages/History'
 import Progress from './pages/Progress'
 import { runAutoClose } from './data/helpers'
+import { Toaster } from '@/ui/sonner'
 
 // Keying on dayId guarantees a clean remount whenever the session day
 // changes, so WorkoutSession can safely read its initial state straight
@@ -76,6 +77,7 @@ export default function App() {
           <Route path="/progress" element={<Progress />} />
         </Routes>
       </div>
+      <Toaster />
     </HashRouter>
   )
 }

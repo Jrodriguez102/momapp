@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { logBodyWeight } from '../data/helpers'
+import { notifyError } from '@/ui/toast'
 
 // Single-field body-weight logger, shared by the Progress tab panel and the
 // Home tab's weekly weigh-in card. onSaved: called after a successful insert.
@@ -18,7 +19,7 @@ export default function BodyWeightForm({ onSaved, autoFocus = true }) {
       onSaved()
     } catch (err) {
       console.error('Failed to log weight:', err)
-      alert('Could not save — check your connection and try again.')
+      notifyError('Could not save — check your connection and try again.')
     } finally {
       setSaving(false)
     }
