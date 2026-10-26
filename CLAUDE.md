@@ -36,12 +36,21 @@ Run from the `momapp/` directory (this is the actual repo root — the parent
 **Data-driven program, thin components.** `src/data/program.js` is the single
 source of truth for the training program — days, exercises, sets, rep ranges,
 muscle groups, alternatives, per-exercise weights (`startWeight`/`goalWeight`/
-`increment`/`confidence`), block structure constants, deload logic, volume
-thresholds. Nothing exercise/week/rep related should be hardcoded into a
-component; change program content only in this file. `src/data/helpers.js`
-layers query/computation functions on top of it (block/week + queue math,
-session writes, auto-close, progression suggestions, volume tallies, lookups)
-and is the bridge between static program data and Supabase-backed session data.
+`increment`/`confidence`), block structure constants, deload logic. Nothing
+exercise/week/rep related should be hardcoded into a component; change program
+content only in this file. On top of it:
+- `src/domain/` — pure rules, no React or Supabase: block/week + queue math
+  (`block.js`), session rules incl. auto-close decisions and difficulty↔rpe
+  (`sessionRules.js`), progression suggestions (`progression.js`), calendar /
+  streak / weigh-in (`calendar.js`), lookups + top set / 1RM / volume
+  (`metrics.js`), the Home week rows (`weekPlan.js`), live-workout state
+  (`workoutState.js`), formatting (`format.js`).
+- `src/services/` — the only modules that import the Supabase client
+  (`sessionsApi`, `setsApi`, `bodyWeightApi`, `autoClose`). Reads throw on
+  error; screens load through `useAsyncData` (8 s timeout, error state).
+- `src/features/<screen>/` — screens and their hooks; `src/features/common/`
+  holds editing pieces shared by Workout and History; `src/ui/` is the design
+  system (no data imports); `src/app/AppShell.jsx` is the page chrome + nav.
 
 **Block 01 (current).** 4 days run as a *queue* — Upper A → Lower A → Upper B →
 Lower B → repeat (`PROGRAM_DAYS` order). 21 unique movements across 22 slots
@@ -63,7 +72,7 @@ completed block-1 session (`getNextQueueDay`), Day 1 if none. A `partial`
 session doesn't count, so the same day stays next; a missed calendar day never
 skips content. Home's "Choose a different day" lets her start any day; the
 queue then continues from whichever day she completed last. Counts are fetched
-fresh on every page that needs them (Home, WorkoutSession).
+fresh on every page that needs them (Home, the workout).
 
 **Planned weekdays are display only.** `PLANNED_WEEKDAYS` (Mon, Tue, Thu, Fri)
 drives only the Home week card (`buildTrainingWeek` → `buildWeekRows` in
@@ -76,11 +85,10 @@ weeks with ≥ 3 completed sessions; an unfinished current week never breaks it.
 
 **Routing:** `HashRouter` with three tabs (Home, History, Progress)
 plus a session flow at `/session/:dayId`. `WorkoutSessionRoute` in `App.jsx` keys
-`WorkoutSession` on `dayId` to force a clean remount on day change, so the
-component reads its draft synchronously via lazy `useState` initializers (no
-restore-then-overwrite race). The Volume tab was removed from nav/routes, but
-its computation (`getPlannedWeeklyVolume`, `getVolumeStatus` with
-`VOLUME_THRESHOLDS_BY_GROUP`) was kept since it may come back.
+`WorkoutPage` on `dayId` to force a clean remount on day change, so
+`useWorkoutSession` reads its draft synchronously via lazy `useState`
+initializers (no restore-then-overwrite race). The old Volume tab and its
+computation are gone.
 
 **Auto-close runs before anything counts.** The app can't run timers while
 closed, so `App.jsx` calls `runAutoClose()` on open and on `visibilitychange`
@@ -91,7 +99,7 @@ null, `status` = completed if ≥ 6 sets else partial. A stale zero-set session
 is deleted. All writes are guarded on `status = 'in_progress'`, so it's
 idempotent. Pages `await afterAutoClose()` before computing queue/week/resume
 state, and listen for `SESSIONS_AUTO_CLOSED_EVENT` to refresh (Home) or
-stop logging (WorkoutSession). No pg_cron / scheduled DB jobs.
+stop logging (the workout). No pg_cron / scheduled DB jobs.
 
 **Workout session lifecycle** (`src/features/workout/`: `useWorkoutSession`
 owns all of this, `workoutDraft.js` the draft, `WorkoutPage` + components the
@@ -189,7 +197,7 @@ exercise_name, set_number)`, `rpe` only on each exercise's last set),
 schema of a shared project (last free-tier slot — no new projects, keep writes
 minimal). RLS is open to `anon` (single user, no auth). Any schema change goes
 through hand-run SQL, never from the app; when adding fields to a logged set
-or session, update the schema file and the write helpers in `helpers.js`.
+or session, update the schema file and the write functions in `src/services/`.
 
 **Progress tab** (`src/features/progress/`; pure parts in `progressMath.js`):
 body weight card (latest weight, a neutral delta badge over the selected
@@ -206,21 +214,29 @@ between the pilot and Block 01, names didn't), and each session's "top set"
 Epley estimate (`estimate1RM`), always labeled "estimated", never a true 1RM.
 Raw per-set data stays available in each session's `sets` array.
 
-**Styling:** Tailwind v4 via `@tailwindcss/vite`, theme tokens in
-`src/index.css` under `@theme`. The `base-*` scale is intentionally
-*reversed* — `base-950` is the lightest (page background), `base-100` the
-darkest (primary text) — so `text-base-100`/`bg-base-950` keep meaning
-"primary text"/"page background". Display font is Nunito (`font-display`),
-body/UI text is Inter (`font-body`). Cards use the flat `.card` class.
-`.glass` is still defined in `index.css` but no component uses it any more
-(`EffortTap` was its last consumer); it can be removed in the redesign. Nav is
-a floating dark pill (`App.jsx`) with the active tab as a white sub-pill. A
-full visual redesign is planned and must treat the data contract as frozen.
+**Styling:** mobile-only, light theme only. Tailwind v4 via `@tailwindcss/vite`;
+all design tokens live in `src/ui/tokens.css` as semantic Tailwind theme
+values using shadcn/ui role names (`background` cream #FFF8F6, `surface`
+white, `foreground`, `muted-foreground`, `primary` coral #B03A2F, `accent` coral
+tint, `success`, `warning`, `nav`, `border`, `input`, `ring`), plus radii
+(`rounded-card` / `rounded-row`), a type scale with a 12px minimum
+(`text-caption` … `text-hero`; `text-field` = 20px inputs so iOS never zooms),
+spacing (`px-gutter`, `size-tap` = 44px, `h-input` = 52px, `h-nav`) and
+coral-tinted shadows. The primary gradient (`bg-gradient-primary`, #C94D41 →
+#B03A2F) keeps white text ≥ 4.5:1. `src/index.css` only imports Tailwind,
+tw-animate-css and the tokens, sets the fonts (Nunito `font-display` for
+headings/big numbers, Inter `font-body`) and the body. Feature code uses only
+`src/ui/` primitives (Button, Card, HeroCard, SetRow, DayRow, Sheet, AlertDialog,
+Select, ChoiceChips, SegmentedControl, …; shadcn/ui components restyled on the
+tokens, Radix underneath) and token utilities — no raw colors, radii or font
+sizes. A color name must never double as a font-size name (`tokens.test.js`).
+Merge classes with `cn` from `src/lib/utils.js` (taught the custom names).
+Nav is a floating dark pill (`BottomNav`) with a cream active pill, hidden on
+`/session/*`. The data contract stays frozen for styling work.
 
 ## Before deploying
 
-`vite.config.js`'s `base` must match the GitHub repo name, and
-`src/lib/supabase.js` must point at the real Supabase project — see
-`README.md` for the setup checklist. Note: the README also mentions a
-`PROGRAM_START_DATE` setting from an earlier phase; progression is now
-session-count-based (see above), so that setting no longer exists in source.
+`vite.config.js`'s `base` must match the GitHub repo name (`/momapp/`), and
+`src/lib/supabase.js` must point at the real Supabase project. Deploying is
+manual (`npm run deploy`); pushing to `main` does not update the live site.
+Run lint, tests and build first, and check `npm run preview` at `/momapp/`.

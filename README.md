@@ -1,58 +1,72 @@
-# Strength & Tone — Workout App
+# Strength & Tone
 
-React + Vite + Tailwind + Supabase workout tracker, built from the same
-template pattern as the previous app (HashRouter, data-driven program,
-gh-pages deploy).
+A mobile web app for one person's lifting program: Arlene's Block 01, four
+workouts run as a queue (Upper A → Lower A → Upper B → Lower B), 24 sessions
+per block with an automatic deload in week 6. It suggests each lift's weight
+from her last session, logs every set, keeps her history editable for 48
+hours, and tracks body weight and strength trends. It's built for her phone,
+added to the Home Screen.
 
-## What's in Phase 1
+Single user, no login: the Supabase anon key in `src/lib/supabase.js` is
+public by design, and the app lives at an unlisted URL.
 
-- Full Block 1 program (`src/data/program.js`) — 5-day Upper/Lower x2 +
-  Full Body split, seeded starting weights from her real lower-body
-  session, 2-3 alternatives per exercise, 4-week block with auto-deload
-  logic
-- Supabase schema (`supabase/schema.sql`) — `workout_sessions`,
-  `exercise_logs`, `personal_records`, RLS enabled
-- App shell: Dashboard, Workout Session flow, Progress/analytics tab
-- Body diagram (front/back SVG) color-coded by weekly training volume
-  per muscle group
-- RPE logging with an explainer tooltip, end-of-session effort tap,
-  "last time you lifted X" reminders, exercise swap/alternatives,
-  sessionStorage persistence for in-progress sessions
+## Stack
 
-## Setup
+- React 19 + Vite, `HashRouter` (works on GitHub Pages without rewrites)
+- Tailwind CSS v4 (`@tailwindcss/vite`) with design tokens in
+  `src/ui/tokens.css`
+- shadcn/ui components on Radix, restyled in `src/ui/`; Sonner toasts;
+  lucide icons; Recharts for the Progress charts
+- Supabase (Postgres, `momapp` schema of a shared project)
+- Vitest + Testing Library; oxlint
 
-1. **Create a Supabase project** at supabase.com, then run
-   `supabase/schema.sql` in the SQL editor.
-2. **Add your credentials** in `src/lib/supabase.js`:
-   ```js
-   const SUPABASE_URL = 'https://xxxx.supabase.co'
-   const SUPABASE_ANON_KEY = 'your-anon-key'
-   ```
-3. **Set the program start date** in `src/pages/Dashboard.jsx` and
-   `src/pages/WorkoutSession.jsx` (`PROGRAM_START_DATE`) to whatever
-   Monday she starts.
-4. **Install and run locally**:
-   ```bash
-   npm install
-   npm run dev
-   ```
+## Scripts
 
-## Deploying to GitHub Pages
+Run from this folder (`momapp/`, the repo root).
 
-1. Update `base` in `vite.config.js` to match your repo name, e.g.
-   `base: '/mom-workout-app/'`.
-2. Push this repo to GitHub.
-3. Run:
-   ```bash
-   npm run deploy
-   ```
-   This builds and pushes to the `gh-pages` branch only — it does **not**
-   commit your source changes to `main`. Commit/push those separately.
-4. Enable GitHub Pages in repo settings, pointing at the `gh-pages` branch.
+| Command | What it does |
+|---|---|
+| `npm run dev` | Dev server against the **real** Supabase data |
+| `npm run dev:fixture` | The app on fake in-memory data at `http://<this-machine>:5199/momapp/` (open it on a phone on the same Wi-Fi). Never contacts Supabase and resets on reload. Use it for anything that writes. URL switches before the `#`: `?empty`, `?blockDone`, `?failEffort`, `?nobanner` |
+| `npm test` | Unit and component tests |
+| `npm run lint` | oxlint |
+| `npm run build` | Production build into `dist/` |
+| `npm run preview` | Serve the build locally at `/momapp/` |
+| `npm run deploy` | Build, then publish `dist/` to the `gh-pages` branch (the live site) |
 
-## Still to build (Phase 2/3 per our plan)
+## Deploying
 
-- Weekly volume tracker as its own numbers view (diagram is done, a
-  supporting list view could be added)
-- Block 2+ program data (exercise/rep-range rotation to avoid staleness)
-- Any additional polish pass on mobile responsiveness / animations
+Deploying is manual:
+
+1. Commit your changes on `main` and run `npm run lint`, `npm test` and
+   `npm run build`.
+2. Check the build with `npm run preview` at `http://localhost:4173/momapp/`.
+3. Run `npm run deploy`.
+
+**Pushing to `main` does not update the live site.** Only `npm run deploy`
+does, and it publishes whatever is in your working copy — it doesn't push
+your source to `main` either, so push that separately. Avoid deploying
+while a workout is in progress on her phone.
+
+`base` in `vite.config.js` must match the GitHub repo name (`/momapp/`).
+
+## Data
+
+Tables (`workout_sessions`, `exercise_logs`, `body_weight_logs`) are
+described in `supabase/schema.sql`. Schema changes are hand-run SQL in the
+Supabase SQL editor, never from the app. What the app writes is a fixed
+contract — see `CLAUDE.md` before changing anything that saves data.
+
+## Code layout
+
+- `src/data/program.js` — the program itself (days, exercises, sets, rep
+  ranges, alternatives, weights). Change the program only here.
+- `src/domain/` — pure rules (block and queue math, progression, session
+  rules, calendar, metrics)
+- `src/services/` — all Supabase reads and writes
+- `src/features/` — the screens: `home`, `workout`, `history`, `progress`
+- `src/ui/` — design-system components and tokens
+- `src/dev/fixture/` — fake data for `npm run dev:fixture` and tests
+
+`CLAUDE.md` has the detailed rules (queue, progression, auto-close, edit
+window, styling).
