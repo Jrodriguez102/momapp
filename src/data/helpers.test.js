@@ -10,8 +10,6 @@ import {
   isWithinEditWindow,
   parseRepRange,
   getExerciseSuggestion,
-  getPlannedWeeklyVolume,
-  getVolumeStatus,
   groupSessionLogsByExercise,
   findExerciseById,
   findDayById,
@@ -246,23 +244,6 @@ describe('getExerciseSuggestion', () => {
   it('ignores rows without reps', () => {
     const logs = loggedSession(BENCH.name, { weight: 35, reps: [null, null, null, null], daysAgo: 2 })
     expect(suggest({ logs })).toMatchObject({ action: 'start' })
-  })
-})
-
-// ---- Volume (kept for a possible Volume tab) ----------------------------------
-describe('volume helpers', () => {
-  it('halves planned volume in the deload week', () => {
-    const week1 = getPlannedWeeklyVolume(1)
-    const week6 = getPlannedWeeklyVolume(6)
-    expect(week1.calves).toBe(6) // shared calf raise on day 2 + day 4, 3 sets each
-    expect(week6.calves).toBe(4)
-    expect(week6.chest).toBeLessThan(week1.chest)
-  })
-
-  it('classifies volume against per-group thresholds', () => {
-    expect(getVolumeStatus(7, 'chest')).toBe('low')
-    expect(getVolumeStatus(10, 'chest')).toBe('optimal')
-    expect(getVolumeStatus(15, 'biceps')).toBe('high')
   })
 })
 

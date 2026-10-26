@@ -27,7 +27,7 @@ export const GOAL_WEEK = 5 // goalWeight below is the target by the end of this 
 export const PLANNED_WEEKDAYS = [1, 2, 4, 5]
 
 // ---- Muscle groups -------------------------------------------------------
-// Keys used everywhere volume is tallied.
+// Keys for each exercise's muscleGroups.
 export const MUSCLE_GROUPS = [
   'chest',
   'back',
@@ -40,46 +40,25 @@ export const MUSCLE_GROUPS = [
   'calves',
 ]
 
-// Weekly set-volume thresholds per muscle group, used for any volume
-// coloring. Groups without their own entry use `default`. Adjust here only.
-export const VOLUME_THRESHOLDS_BY_GROUP = {
-  default:   { low: 8, high: 20 },
-  biceps:    { low: 4, high: 14 },
-  triceps:   { low: 4, high: 14 },
-  calves:    { low: 4, high: 16 },
-  shoulders: { low: 6, high: 18 },
-}
-
-export function getVolumeThresholds(muscleGroup) {
-  return VOLUME_THRESHOLDS_BY_GROUP[muscleGroup] || VOLUME_THRESHOLDS_BY_GROUP.default
-}
-
-// Exercises that don't take an external weight (bodyweight movements).
-// Drives conditional UI (hides the weight input) for any exercise, present
-// or future, matched by name.
-export const BODYWEIGHT_EXERCISES = new Set([
-  // none in Block 01 — every current exercise is loaded
-])
-
 // ---- Week metadata across a 6-week block ------------------------------------
 // Week 6 is always an auto-applied deload — no toggle, no override.
 // weekType: 'progressive' | 'deload'
 export function getWeekMeta(weekInBlock) {
   switch (weekInBlock) {
     case 1:
-      return { weekType: 'progressive', label: 'Week 1', volumeMultiplier: 1, rpeCap: 8, note: 'Calibration week — find honest working weights.' }
+      return { weekType: 'progressive', label: 'Week 1', note: 'Calibration week — find honest working weights.' }
     case 2:
-      return { weekType: 'progressive', label: 'Week 2', volumeMultiplier: 1, rpeCap: 8, note: 'Add reps first, then weight once you hit the top of the range.' }
+      return { weekType: 'progressive', label: 'Week 2', note: 'Add reps first, then weight once you hit the top of the range.' }
     case 3:
-      return { weekType: 'progressive', label: 'Week 3', volumeMultiplier: 1, rpeCap: 8, note: 'Keep building — small jumps where the top of the range felt controlled.' }
+      return { weekType: 'progressive', label: 'Week 3', note: 'Keep building — small jumps where the top of the range felt controlled.' }
     case 4:
-      return { weekType: 'progressive', label: 'Week 4', volumeMultiplier: 1, rpeCap: 8, note: 'Keep building — small jumps where the top of the range felt controlled.' }
+      return { weekType: 'progressive', label: 'Week 4', note: 'Keep building — small jumps where the top of the range felt controlled.' }
     case 5:
-      return { weekType: 'progressive', label: 'Week 5', volumeMultiplier: 1, rpeCap: 8, note: 'Goal week — aim for your block goal weights.' }
+      return { weekType: 'progressive', label: 'Week 5', note: 'Goal week — aim for your block goal weights.' }
     case DELOAD_WEEK:
-      return { weekType: 'deload', label: 'Week 6 (Deload)', volumeMultiplier: 0.5, rpeCap: 6, note: 'Deload — sets are automatically halved. Trust it.' }
+      return { weekType: 'deload', label: 'Week 6 (Deload)', note: 'Deload — sets are automatically halved. Trust it.' }
     default:
-      return { weekType: 'progressive', label: `Week ${weekInBlock}`, volumeMultiplier: 1, rpeCap: 8, note: '' }
+      return { weekType: 'progressive', label: `Week ${weekInBlock}`, note: '' }
   }
 }
 
@@ -141,7 +120,7 @@ export const RPE_EXPLAINER = {
 // ~2.5 min incl. rest, rounded to 5); it never changes what's saved.
 //
 // Each exercise: id (stable kebab-case of the name — the same movement on two
-// days shares an id), name, demoUrl, sets, repRange, rpe (display only),
+// days shares an id), name, demoUrl, sets, repRange,
 // muscleGroups[], alternatives[] (exactly 2, { name, demoUrl }),
 // supersetGroup (optional, pairs exercises done back-to-back), and
 // weight: { unit, startWeight, goalWeight, increment, confidence }.
@@ -156,7 +135,6 @@ const LEG_PRESS_CALF_RAISE = {
   demoUrl: 'https://www.youtube.com/shorts/DqT1h2_hQJ4',
   sets: 3,
   repRange: '12-15',
-  rpe: '7-8',
   muscleGroups: ['calves'],
   alternatives: [
     { name: 'Seated Calf Raise', demoUrl: 'https://www.youtube.com/shorts/qJjqt0Q2WqU' },
@@ -178,7 +156,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/q--6_PuEV_c',
         sets: 4,
         repRange: '8-10',
-        rpe: '7-8',
         muscleGroups: ['chest'],
         alternatives: [
           { name: 'Chest Press Machine', demoUrl: 'https://www.youtube.com/shorts/DgrjO44tWPs' },
@@ -192,7 +169,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/bNmvKpJSWKM',
         sets: 3,
         repRange: '10-12',
-        rpe: '7-8',
         muscleGroups: ['back'],
         alternatives: [
           { name: 'Assisted Pull-Up Machine', demoUrl: 'https://www.youtube.com/shorts/JcGwiiGyYFA' },
@@ -206,7 +182,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/2D0TyoHv_EY',
         sets: 3,
         repRange: '8-10',
-        rpe: '7-8',
         muscleGroups: ['shoulders'],
         alternatives: [
           { name: 'Machine Shoulder Press', demoUrl: 'https://www.youtube.com/shorts/6v4nrRVySj0' },
@@ -220,7 +195,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/8QuMq1GMMng',
         sets: 3,
         repRange: '10-12',
-        rpe: '7-8',
         muscleGroups: ['back'],
         alternatives: [
           { name: 'DB Row (bench-supported)', demoUrl: 'https://www.youtube.com/shorts/WkFX6_GxAs8' },
@@ -234,7 +208,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/IVoL1BAEY6M',
         sets: 3,
         repRange: '10-12',
-        rpe: '7-8',
         muscleGroups: ['triceps'],
         alternatives: [
           { name: 'DB Skull Crusher', demoUrl: 'https://www.youtube.com/shorts/WLQizQXoeIg' },
@@ -249,7 +222,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/0OA-DqdTyZA',
         sets: 3,
         repRange: '10-12',
-        rpe: '7-8',
         muscleGroups: ['biceps'],
         alternatives: [
           { name: 'EZ-Bar Curl', demoUrl: 'https://www.youtube.com/shorts/d2r5TCqnR4Y' },
@@ -272,7 +244,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/g9i05umL5vc',
         sets: 4,
         repRange: '10-12',
-        rpe: '7-8',
         muscleGroups: ['quads'],
         alternatives: [
           { name: 'Pendulum Squat Machine', demoUrl: 'https://www.youtube.com/shorts/89pJBhEAizI' },
@@ -286,7 +257,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/8q9LVgN2RD4',
         sets: 3,
         repRange: '10-12 / leg',
-        rpe: '7-8',
         muscleGroups: ['quads', 'glutes'],
         alternatives: [
           { name: 'Reverse Lunge (Smith)', demoUrl: 'https://www.youtube.com/shorts/D26udvEstHk' },
@@ -300,7 +270,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/xdbEG3xGLI8',
         sets: 3,
         repRange: '12-15',
-        rpe: '7-8',
         muscleGroups: ['hamstrings'],
         alternatives: [
           { name: 'Lying Leg Curl', demoUrl: 'https://www.youtube.com/shorts/QwmpZXukkoQ' },
@@ -314,7 +283,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/_UYW5ym1YKE',
         sets: 3,
         repRange: '15-20',
-        rpe: '7-8',
         muscleGroups: ['glutes'],
         alternatives: [
           { name: 'Hip Abduction Machine', demoUrl: 'https://www.youtube.com/shorts/WOv7Aca6r-0' },
@@ -337,7 +305,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/o0Ud3RU59hw',
         sets: 4,
         repRange: '10-12',
-        rpe: '7-8',
         muscleGroups: ['chest'],
         alternatives: [
           { name: 'Incline DB Press', demoUrl: 'https://www.youtube.com/shorts/8fXfwG4ftaQ' },
@@ -351,7 +318,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/H8jf3DwlIlo',
         sets: 3,
         repRange: '10-12 / side',
-        rpe: '7-8',
         muscleGroups: ['back'],
         alternatives: [
           { name: 'Cable Single-Arm Row', demoUrl: 'https://www.youtube.com/shorts/bLVeOunB-c0' },
@@ -365,7 +331,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/9WpNWAM782Y',
         sets: 3,
         repRange: '12-15',
-        rpe: '7-8',
         muscleGroups: ['shoulders'],
         alternatives: [
           { name: 'Reverse Pec Deck', demoUrl: 'https://www.youtube.com/shorts/BmJHBBZRpZg' },
@@ -379,7 +344,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/IcTyO2SyX14',
         sets: 3,
         repRange: '12-15',
-        rpe: '7-8',
         muscleGroups: ['shoulders'],
         alternatives: [
           { name: 'DB Lateral Raise', demoUrl: 'https://www.youtube.com/shorts/Myim1WH6Qec' },
@@ -393,7 +357,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/7hx0-DZgdl8',
         sets: 3,
         repRange: '10-12',
-        rpe: '7-8',
         muscleGroups: ['triceps'],
         alternatives: [
           { name: 'DB Skull Crusher', demoUrl: 'https://www.youtube.com/shorts/WLQizQXoeIg' },
@@ -408,7 +371,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/CrbTqNOlFgE',
         sets: 3,
         repRange: '10-12',
-        rpe: '7-8',
         muscleGroups: ['biceps'],
         alternatives: [
           { name: 'EZ-Bar Curl', demoUrl: 'https://www.youtube.com/shorts/d2r5TCqnR4Y' },
@@ -431,7 +393,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/9JftONhm6g4',
         sets: 3,
         repRange: '10-12',
-        rpe: '7-8',
         muscleGroups: ['glutes'],
         alternatives: [
           { name: 'Single-Leg DB Hip Thrust', demoUrl: 'https://www.youtube.com/shorts/3suM3LwVlVM' },
@@ -445,7 +406,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/qBbB4pgOSS0',
         sets: 4,
         repRange: '10-12',
-        rpe: '7-8',
         muscleGroups: ['hamstrings', 'glutes'],
         alternatives: [
           { name: 'DB RDL', demoUrl: 'https://www.youtube.com/shorts/wiekN4aIJ0g' },
@@ -459,7 +419,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/nDh_BlnLCGc',
         sets: 3,
         repRange: '10-12',
-        rpe: '7-8',
         muscleGroups: ['quads'],
         alternatives: [
           { name: 'Hack Squat Machine', demoUrl: 'https://www.youtube.com/shorts/g9i05umL5vc' },
@@ -473,7 +432,6 @@ export const PROGRAM_DAYS = [
         demoUrl: 'https://www.youtube.com/shorts/hQKQZdCAntQ',
         sets: 3,
         repRange: '12-15 / leg',
-        rpe: '7-8',
         muscleGroups: ['glutes'],
         alternatives: [
           { name: 'Glute Kickback Machine', demoUrl: 'https://www.youtube.com/shorts/3fBptAH0Rnw' },

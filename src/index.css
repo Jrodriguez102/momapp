@@ -3,12 +3,6 @@
 @import "./ui/tokens.css";
 
 @theme {
-  /* Kept only for VOLUME_STATUS_COLORS in src/domain/metrics.js (removed
-     together with it). */
-  --color-glute: #e24b4a;
-  --color-back: #639922;
-  --color-quad: #EF9F27;
-
   --font-display: "Nunito", sans-serif;
   --font-body: "Inter", sans-serif;
 }

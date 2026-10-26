@@ -1,4 +1,4 @@
-import { MUSCLE_GROUPS, getVolumeThresholds, applyDeloadToSets, PROGRAM_DAYS } from '../data/program'
+import { MUSCLE_GROUPS, PROGRAM_DAYS } from '../data/program'
 import { rpeToDifficulty } from './sessionRules'
 
 // ---- Lookups ------------------------------------------------------------------
@@ -33,48 +33,6 @@ export function isValidReps(value) {
 export function isValidWeight(value) {
   const n = Number(value)
   return value !== '' && value != null && Number.isFinite(n) && n >= 0
-}
-
-// ---- Weekly volume tally -----------------------------------------------------
-// Kept for a possible return of the Volume tab; not used by any screen.
-// Prescribed weekly sets per muscle group for the given week (deload-aware).
-export function getPlannedWeeklyVolume(weekInBlock) {
-  const tally = Object.fromEntries(MUSCLE_GROUPS.map((mg) => [mg, 0]))
-  for (const day of PROGRAM_DAYS) {
-    for (const ex of day.exercises) {
-      const sets = applyDeloadToSets(ex.sets, weekInBlock)
-      for (const mg of ex.muscleGroups) {
-        if (tally[mg] !== undefined) tally[mg] += sets
-      }
-    }
-  }
-  return tally
-}
-
-// Given actual logged sets (joined to the exercise's muscle groups), tally
-// real weekly volume.
-export function getActualWeeklyVolume(loggedSets) {
-  // loggedSets: [{ exerciseId, muscleGroups: [...] }]
-  const tally = Object.fromEntries(MUSCLE_GROUPS.map((mg) => [mg, 0]))
-  for (const log of loggedSets) {
-    for (const mg of log.muscleGroups) {
-      if (tally[mg] !== undefined) tally[mg] += 1
-    }
-  }
-  return tally
-}
-
-export function getVolumeStatus(setCount, muscleGroup) {
-  const { low, high } = getVolumeThresholds(muscleGroup)
-  if (setCount < low) return 'low'
-  if (setCount > high) return 'high'
-  return 'optimal'
-}
-
-export const VOLUME_STATUS_COLORS = {
-  low: 'var(--color-quad)',      // yellow-ish
-  optimal: 'var(--color-back)',  // green-ish
-  high: 'var(--color-glute)',    // red/accent
 }
 
 // ---- History grouping ---------------------------------------------------------
