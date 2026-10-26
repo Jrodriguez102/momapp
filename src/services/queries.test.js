@@ -1,28 +1,12 @@
-// Characterization tests for the Supabase-backed helpers: what each query
-// asks for, what it writes (the frozen Block 01 data contract), and what it
-// falls back to when Supabase fails.
+// Characterization tests for the Supabase-backed services: what each query
+// asks for and what it writes (the frozen Block 01 data contract). That
+// reads reject on failure is covered in services.test.js.
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fake, opArgs, hasOp } from '../test/fakeSupabase'
-import {
-  getCompletedSessionCount,
-  getBlockState,
-  getTrainingWeek,
-  getWeeklyStreak,
-  getWorkoutsThisMonth,
-  needsWeighIn,
-  getProgressionLogs,
-  getExerciseLogsForSessions,
-  getFinishedSessions,
-  getAnyInProgressSession,
-  createSession,
-  saveSet,
-  syncExerciseRpe,
-  removeLiveSet,
-  removeHistorySet,
-  finishSession,
-  runAutoClose,
-  logBodyWeight,
-} from './helpers'
+import { fetchCompletedSessionCount, fetchBlockState, fetchTrainingWeek, fetchWeeklyStreak, fetchFinishedSessions, createSession, finishSession } from '@/services/sessionsApi'
+import { fetchWeighInDue, logBodyWeight } from '@/services/bodyWeightApi'
+import { fetchProgressionLogs, fetchExerciseLogsForSessions, saveSet, syncExerciseRpe, removeLiveSet, removeHistorySet } from '@/services/setsApi'
+import { runAutoClose } from '@/services/autoClose'
 
 vi.mock('../lib/supabase', async () => ({ supabase: (await import('../test/fakeSupabase')).fake.client }))
 
@@ -36,56 +20,36 @@ beforeEach(() => {
   fake.reset()
 })
 
-describe('read fallbacks when Supabase fails', () => {
-  beforeEach(() => fake.respond(() => FAIL))
-
-  it('count/list reads return empty defaults', async () => {
-    expect(await getCompletedSessionCount()).toBe(0)
-    expect(await getWorkoutsThisMonth()).toBe(0)
-    expect(await getFinishedSessions()).toEqual([])
-    expect(await getAnyInProgressSession()).toBeNull()
-    expect(await getProgressionLogs(['DB Bench Press'])).toEqual([])
-  })
-
-  it('needsWeighIn does not nag on a failed read', async () => {
-    expect(await needsWeighIn()).toBe(false)
-  })
-
-  it('getBlockState behaves like a fresh block', async () => {
-    expect(await getBlockState()).toMatchObject({ sessionNumber: 1, weekInBlock: 1, lastCompletedDayId: null, nextDay: { id: 'day-1' } })
-  })
-})
-
-describe('getCompletedSessionCount', () => {
+describe('fetchCompletedSessionCount', () => {
   it('counts completed Block 01 sessions', async () => {
     fake.respond(() => ({ count: 5 }))
-    expect(await getCompletedSessionCount()).toBe(5)
+    expect(await fetchCompletedSessionCount()).toBe(5)
     const [q] = fake.queries
     expect(q.table).toBe('workout_sessions')
     expect(q.ops.filter((op) => op.name === 'eq').map((op) => op.args)).toEqual([['block', 1], ['status', 'completed']])
   })
 })
 
-describe('getBlockState', () => {
+describe('fetchBlockState', () => {
   it('puts the day after the most recent completed session next', async () => {
     fake.respond(() => ({ data: [{ day_id: 'day-3' }, { day_id: 'day-2' }, { day_id: 'day-1' }] }))
-    expect(await getBlockState()).toMatchObject({ sessionNumber: 4, lastCompletedDayId: 'day-3', nextDay: { id: 'day-4' } })
+    expect(await fetchBlockState()).toMatchObject({ sessionNumber: 4, lastCompletedDayId: 'day-3', nextDay: { id: 'day-4' } })
     expect(opArgs(fake.queries[0], 'order')).toEqual(['completed_at', { ascending: false }])
   })
 
   it('wraps from day 4 to day 1', async () => {
     fake.respond(() => ({ data: [{ day_id: 'day-4' }] }))
-    expect((await getBlockState()).nextDay.id).toBe('day-1')
+    expect((await fetchBlockState()).nextDay.id).toBe('day-1')
   })
 })
 
-describe('getTrainingWeek', () => {
+describe('fetchTrainingWeek', () => {
   // Wednesday 2026-10-21; planned weekdays are Mon, Tue, Thu, Fri.
   const wednesday = new Date(2026, 9, 21, 10, 0)
 
   it('classifies each Mon-Sun day as completed / missed / planned / rest', async () => {
     fake.respond(() => ({ data: [{ day_id: 'day-1', completed_at: new Date(2026, 9, 19, 9, 0).toISOString() }] }))
-    const week = await getTrainingWeek(wednesday)
+    const week = await fetchTrainingWeek(wednesday)
     expect(week.days.map((d) => d.status)).toEqual(['completed', 'missed', 'rest', 'planned', 'planned', 'rest', 'rest'])
     expect(week.days.map((d) => d.isToday)).toEqual([false, false, true, false, false, false, false])
     expect(week.days[0].completedDayIds).toEqual(['day-1'])
@@ -94,13 +58,13 @@ describe('getTrainingWeek', () => {
 
   it('counts an unplanned-day workout as completed', async () => {
     fake.respond(() => ({ data: [{ day_id: 'day-2', completed_at: new Date(2026, 9, 21, 8, 0).toISOString() }] }))
-    const week = await getTrainingWeek(wednesday)
+    const week = await fetchTrainingWeek(wednesday)
     expect(week.days[2].status).toBe('completed')
   })
 
   it('queries completed sessions from Monday to the next Monday', async () => {
     fake.respond(() => ({ data: [] }))
-    await getTrainingWeek(wednesday)
+    await fetchTrainingWeek(wednesday)
     const [q] = fake.queries
     expect(opArgs(q, 'eq')).toEqual(['status', 'completed'])
     expect(opArgs(q, 'gte')).toEqual(['completed_at', new Date(2026, 9, 19).toISOString()])
@@ -108,7 +72,7 @@ describe('getTrainingWeek', () => {
   })
 })
 
-describe('getWeeklyStreak', () => {
+describe('fetchWeeklyStreak', () => {
   const wednesday = new Date(2026, 9, 21, 10, 0)
   const sessionsOn = (...dates) => dates.map((d) => ({ day_id: 'day-1', completed_at: d.toISOString() }))
 
@@ -121,7 +85,7 @@ describe('getWeeklyStreak', () => {
         new Date(2026, 9, 19, 9), // this week: 1
       ),
     }))
-    expect(await getWeeklyStreak(wednesday)).toBe(2)
+    expect(await fetchWeeklyStreak(wednesday)).toBe(2)
   })
 
   it('adds the current week once it reaches 3', async () => {
@@ -131,31 +95,31 @@ describe('getWeeklyStreak', () => {
         new Date(2026, 9, 19, 9), new Date(2026, 9, 20, 9), new Date(2026, 9, 21, 8),
       ),
     }))
-    expect(await getWeeklyStreak(wednesday)).toBe(2)
+    expect(await fetchWeeklyStreak(wednesday)).toBe(2)
   })
 })
 
-describe('needsWeighIn', () => {
+describe('fetchWeighInDue', () => {
   const now = new Date(2026, 9, 21, 10, 0)
   const daysAgo = (n) => new Date(now.getTime() - n * 24 * 60 * 60 * 1000).toISOString()
 
   it('is due with no entries or none in the last 7 days', async () => {
     fake.respond(() => ({ data: null }))
-    expect(await needsWeighIn(now)).toBe(true)
+    expect(await fetchWeighInDue(now)).toBe(true)
     fake.respond(() => ({ data: { logged_at: daysAgo(7) } }))
-    expect(await needsWeighIn(now)).toBe(true)
+    expect(await fetchWeighInDue(now)).toBe(true)
   })
 
   it('is not due with a recent entry', async () => {
     fake.respond(() => ({ data: { logged_at: daysAgo(2) } }))
-    expect(await needsWeighIn(now)).toBe(false)
+    expect(await fetchWeighInDue(now)).toBe(false)
   })
 })
 
 describe('progression and history reads', () => {
   it('reads block >= 1 completed + partial sets by exercise name', async () => {
     fake.respond(() => ({ data: [] }))
-    await getProgressionLogs(['DB Bench Press', 'Chest Press Machine'])
+    await fetchProgressionLogs(['DB Bench Press', 'Chest Press Machine'])
     const [q] = fake.queries
     expect(q.table).toBe('exercise_logs')
     expect(opArgs(q, 'select')[0]).toContain('workout_sessions!inner(block, status)')
@@ -167,14 +131,14 @@ describe('progression and history reads', () => {
   })
 
   it('skips the query for empty inputs', async () => {
-    expect(await getProgressionLogs([])).toEqual([])
-    expect(await getExerciseLogsForSessions([])).toEqual([])
+    expect(await fetchProgressionLogs([])).toEqual([])
+    expect(await fetchExerciseLogsForSessions([])).toEqual([])
     expect(fake.queries).toHaveLength(0)
   })
 
   it('lists finished sessions newest first', async () => {
     fake.respond(() => ({ data: [{ id: 'x' }] }))
-    expect(await getFinishedSessions()).toEqual([{ id: 'x' }])
+    expect(await fetchFinishedSessions()).toEqual([{ id: 'x' }])
     expect(opArgs(fake.queries[0], 'in')).toEqual(['status', ['completed', 'partial']])
     expect(opArgs(fake.queries[0], 'order')).toEqual(['completed_at', { ascending: false }])
   })

@@ -4,7 +4,7 @@ import HomePage from '@/features/home/HomePage'
 import WorkoutPage from '@/features/workout/WorkoutPage'
 import HistoryPage from '@/features/history/HistoryPage'
 import ProgressPage from '@/features/progress/ProgressPage'
-import { runAutoClose } from './data/helpers'
+import { runAutoClose } from '@/services/autoClose'
 import { AppShell } from '@/app/AppShell'
 import { Toaster } from '@/ui/sonner'
 

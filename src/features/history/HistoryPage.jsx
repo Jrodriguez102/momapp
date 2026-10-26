@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { History as HistoryIcon } from 'lucide-react'
-import { getSessionExerciseLogs } from '@/data/helpers'
 import { fetchFinishedSessions } from '@/services/sessionsApi'
-import { fetchExerciseLogsForSessions } from '@/services/setsApi'
+import { fetchExerciseLogsForSessions, fetchSessionExerciseLogs } from '@/services/setsApi'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { EmptyState } from '@/ui/empty-state'
 import { ErrorState } from '@/ui/error-state'
@@ -35,7 +34,8 @@ export default function HistoryPage() {
   // After an edit: refetch that session's sets, and apply any session-field
   // change (session_rpe, or status -> partial when every set was removed).
   async function refreshSession(sessionId, patch) {
-    const fresh = await getSessionExerciseLogs(sessionId)
+    // Never rejects (an empty list on failure), as before.
+    const fresh = await fetchSessionExerciseLogs(sessionId).catch(() => [])
     setData((prev) => ({
       sessions: patch ? prev.sessions.map((s) => (s.id === sessionId ? { ...s, ...patch } : s)) : prev.sessions,
       logsBySession: new Map(prev.logsBySession).set(sessionId, fresh),

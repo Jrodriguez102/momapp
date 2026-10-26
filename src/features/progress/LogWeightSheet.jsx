@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { logBodyWeight } from '@/data/helpers'
+import { logBodyWeight } from '@/services/bodyWeightApi'
 import { Button } from '@/ui/button'
 import { NumberInput } from '@/ui/number-input'
 import { Sheet, SheetBody, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/ui/sheet'

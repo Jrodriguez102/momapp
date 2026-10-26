@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { Dumbbell } from 'lucide-react'
-import { getBodyWeightLogs } from '@/data/helpers'
 import { fetchBodyWeightLogs } from '@/services/bodyWeightApi'
 import { fetchAllStrengthLogs } from '@/services/setsApi'
 import { useAsyncData } from '@/hooks/useAsyncData'
@@ -28,7 +27,8 @@ export default function ProgressPage() {
   const now = new Date()
 
   async function refreshBodyWeight() {
-    const bodyWeightLogs = await getBodyWeightLogs()
+    // Never rejects (an empty list on failure), as before.
+    const bodyWeightLogs = await fetchBodyWeightLogs().catch(() => [])
     setData((prev) => ({ ...prev, bodyWeightLogs }))
   }
 

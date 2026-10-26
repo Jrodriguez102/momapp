@@ -1,28 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  fetchAnyInProgressSession,
-  fetchCompletedSessionCount,
-  fetchInProgressSession,
-  fetchRecentCompletedSessionCount,
-} from '@/services/sessionsApi'
-import { fetchProgressionLogs, fetchSessionExerciseLogs } from '@/services/setsApi'
+import { createSession, fetchAnyInProgressSession, fetchCompletedSessionCount, fetchInProgressSession, fetchRecentCompletedSessionCount, finishSession } from '@/services/sessionsApi'
+import { fetchProgressionLogs, fetchSessionExerciseLogs, removeLiveSet, renameExerciseInSession, saveSet, syncExerciseRpe } from '@/services/setsApi'
 import { LOAD_TIMEOUT_MS, LoadTimeoutError, withTimeout } from '@/hooks/useAsyncData'
-import {
-  findDayById,
-  getCurrentBlockAndWeek,
-  getExerciseSuggestion,
-  createSession,
-  saveSet,
-  removeLiveSet,
-  syncExerciseRpe,
-  renameExerciseInSession,
-  finishSession,
-  difficultyToRpe,
-  getSetsVolume,
-  getElapsedSeconds,
-  afterAutoClose,
-  SESSIONS_AUTO_CLOSED_EVENT,
-} from '@/data/helpers'
+import { findDayById, getSetsVolume } from '@/domain/metrics'
+import { getCurrentBlockAndWeek } from '@/domain/block'
+import { getExerciseSuggestion } from '@/domain/progression'
+import { difficultyToRpe, getElapsedSeconds } from '@/domain/sessionRules'
+import { afterAutoClose, SESSIONS_AUTO_CLOSED_EVENT } from '@/services/autoClose'
 import {
   allLoggedRows as getAllLoggedRows,
   applyRestoredSwaps,

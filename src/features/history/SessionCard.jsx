@@ -1,17 +1,9 @@
 import { useMemo, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
-import {
-  difficultyToRpe,
-  findDayById,
-  groupSessionLogsByExercise,
-  isValidReps,
-  isValidWeight,
-  isWithinEditWindow,
-  removeHistorySet,
-  saveSet,
-  syncExerciseRpe,
-  updateSessionRpe,
-} from '@/data/helpers'
+import { difficultyToRpe, isWithinEditWindow } from '@/domain/sessionRules'
+import { findDayById, groupSessionLogsByExercise, isValidReps, isValidWeight } from '@/domain/metrics'
+import { removeHistorySet, saveSet, syncExerciseRpe } from '@/services/setsApi'
+import { updateSessionRpe } from '@/services/sessionsApi'
 import { cn } from '@/lib/utils'
 import { EffortPicker } from '@/features/common/EffortPicker'
 import { LastSetFeelChips } from '@/features/common/LastSetFeelChips'

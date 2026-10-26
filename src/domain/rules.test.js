@@ -1,30 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import {
-  getGreeting,
-  getStatusForSetCount,
-  getCurrentBlockAndWeek,
-  getNextQueueDay,
-  difficultyToRpe,
-  rpeToDifficulty,
-  getSessionRpeLabel,
-  isWithinEditWindow,
-  parseRepRange,
-  getExerciseSuggestion,
-  groupSessionLogsByExercise,
-  findExerciseById,
-  findDayById,
-  isValidReps,
-  isValidWeight,
-  filterByTimeframe,
-  groupLogsBySession,
-  getTopSet,
-  estimate1RM,
-  getSetsVolume,
-  getElapsedSeconds,
-  formatDuration,
-  getDaySummary,
-  HISTORY_EDIT_WINDOW_MS,
-} from './helpers'
+import { getGreeting, formatDuration } from '@/domain/format'
+import { getStatusForSetCount, difficultyToRpe, rpeToDifficulty, getSessionRpeLabel, isWithinEditWindow, getElapsedSeconds, HISTORY_EDIT_WINDOW_MS } from '@/domain/sessionRules'
+import { getCurrentBlockAndWeek, getNextQueueDay } from '@/domain/block'
+import { parseRepRange, getExerciseSuggestion } from '@/domain/progression'
+import { groupSessionLogsByExercise, findExerciseById, findDayById, isValidReps, isValidWeight, groupLogsBySession, getTopSet, estimate1RM, getSetsVolume, getDaySummary } from '@/domain/metrics'
+import { filterByTimeframe } from '@/domain/calendar'
 
 vi.mock('../lib/supabase', async () => ({ supabase: (await import('../test/fakeSupabase')).fake.client }))
 
