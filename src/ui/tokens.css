@@ -6,9 +6,6 @@
    primary, muted, accent, border, input, ring) so shadcn components work
    unchanged; app-specific roles (success, warning, nav, ...) sit alongside.
 
-   The legacy base-* / accent-start / muscle-name tokens in index.css stay
-   until every screen has moved over, then they are removed.
-
    Contrast (WCAG, vs. white unless noted): foreground 15.96, secondary 9.52,
    muted 5.63 (4.86 on surface-muted), accent-foreground 5.50 on accent,
    white on gradient 4.54 -> 6.01, success-foreground 6.38+ on its tints,

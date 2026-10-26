@@ -3,27 +3,11 @@
 @import "./ui/tokens.css";
 
 @theme {
-  /* Reversed scale vs. the old dark theme: base-950 is now the lightest
-     (page background), base-100 the darkest (primary text). Keeping the
-     950->100 naming direction as-is (rather than flipping it) means every
-     existing text-base-100 / bg-base-950 class in components still means
-     "primary text" / "page background" without a find-and-replace pass. */
-  --color-base-950: #fdfaf9;
-  --color-base-900: #f7f0ee;
-  --color-base-800: #ffffff;
-  --color-base-700: #f2e2df;
-  --color-base-600: #ecdcd9;
-  --color-base-400: #8a7570;
-  --color-base-200: #5a3f39;
-  --color-base-100: #2b1f1c;
-
-  --color-accent-start: #e2685c;
-  --color-accent-end: #c2453a;
-
+  /* Kept only for VOLUME_STATUS_COLORS in src/domain/metrics.js (removed
+     together with it). */
   --color-glute: #e24b4a;
   --color-back: #639922;
   --color-quad: #EF9F27;
-  --color-shoulder: #c2453a;
 
   --font-display: "Nunito", sans-serif;
   --font-body: "Inter", sans-serif;
@@ -34,30 +18,4 @@ body {
   color: var(--color-foreground);
   font-family: var(--font-body);
   -webkit-tap-highlight-color: transparent;
-}
-
-.glass {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(43, 31, 28, 0.06);
-  box-shadow: 0 1px 3px rgba(43, 31, 28, 0.05);
-}
-
-/* Flat, opaque card — no blur/border, just a soft shadow lifting it off the
-   page background. Replacing .glass tab-by-tab as each gets its design pass. */
-.card {
-  background: var(--color-base-800);
-  box-shadow: 0 2px 16px rgba(43, 31, 28, 0.06);
-}
-
-.accent-gradient {
-  background: linear-gradient(135deg, var(--color-accent-start), var(--color-accent-end));
-}
-
-.accent-text-gradient {
-  background: linear-gradient(135deg, var(--color-accent-start), var(--color-accent-end));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
 }
