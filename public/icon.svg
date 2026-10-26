@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Strength & Tone app icon: coral-gradient disc with a cream dumbbell on
+       cream. Full-bleed and inside the maskable safe zone (disc = 69%). -->
+  <defs>
+    <linearGradient id="coral" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#C94D41"/>
+      <stop offset="1" stop-color="#B03A2F"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="#FFF8F6"/>
+  <circle cx="256" cy="256" r="176" fill="url(#coral)"/>
+  <g fill="#FFF8F6" transform="rotate(-35 256 256)">
+    <rect x="118" y="208" width="34" height="96" rx="14"/>
+    <rect x="156" y="184" width="34" height="144" rx="16"/>
+    <rect x="186" y="240" width="140" height="32" rx="16"/>
+    <rect x="322" y="184" width="34" height="144" rx="16"/>
+    <rect x="360" y="208" width="34" height="96" rx="14"/>
+  </g>
+</svg>
